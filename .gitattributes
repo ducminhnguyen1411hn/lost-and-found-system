@@ -1,0 +1,26 @@
+# Normalize line endings: let git decide on checkin, keep platform-appropriate on checkout.
+* text=auto
+
+# Source files
+*.cs       text diff=csharp
+*.cshtml   text
+*.razor    text
+*.sql      text
+*.json     text
+*.js       text
+*.css      text
+*.md       text
+
+# Files that are happiest as CRLF on Windows tooling
+*.sln      text eol=crlf
+*.slnx     text eol=crlf
+*.csproj   text eol=crlf
+
+# Binary assets
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.woff binary
+*.woff2 binary
