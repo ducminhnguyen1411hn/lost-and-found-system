@@ -1,0 +1,59 @@
+## .NET / Visual Studio
+
+# Build output
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+artifacts/
+
+# Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userprefs
+*.userosscache
+*.sln.docstates
+*_i.c
+*_p.c
+
+# Rider
+*.DotSettings.user
+
+# Build / test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.binlog
+project.lock.json
+project.fragment.lock.json
+
+# NuGet
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+*.nuget.props
+*.nuget.targets
+
+# ASP.NET / EF
+*.mdf
+*.ldf
+*.ndf
+appsettings.*.local.json
+
+# User-specific secrets (use `dotnet user-secrets` for real secrets; do NOT commit them)
+secrets.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+## Kept on purpose (do NOT ignore): db/schema.sql, Models/Entities/, .claude/, docs/,
+## appsettings.json (LocalDB connection only — no secret).
