@@ -3,9 +3,9 @@
 Single entry point for the team. Skim this first, then dive into the spec docs or `CLAUDE.md`.
 
 > ℹ️ **Spec docs**: the 5 source documents (PRODUCT_OVERVIEW, PROJECT_INSTRUCTION, REQUIREMENTS_2DEV,
-> DIAGRAMS, FEATURE_PLAYBOOK) were provided with broken Vietnamese encoding, so they were **not**
-> auto-imported (committing corrupted specs is worse than not having them). **Drop your clean
-> originals into `docs/`** — this INDEX already distills the essentials so the repo is usable now.
+> DIAGRAMS, FEATURE_PLAYBOOK) now live in **[`docs/specs/`](specs/)** as faithful **English translations**
+> of the Vietnamese originals. This INDEX distills the essentials; read the full spec in `docs/specs/`
+> when you need the detail.
 
 ---
 
@@ -20,7 +20,7 @@ workflow**, **(3)** realtime **notifications**.
 
 ## 2. Read order
 1. This file → 2. `CLAUDE.md` (conventions, always loaded by Claude Code) → 3. `docs/BASE_SETUP.md`
-(how the foundation was built) → 4. the 5 spec docs once you add them.
+(how the foundation was built) → 4. the 5 spec docs in [`docs/specs/`](specs/).
 
 ## 3. Roles (ASP.NET Core Identity)
 | Role | Who | Can |
