@@ -5,15 +5,13 @@ using Microsoft.Extensions.DependencyInjection;
 namespace LostAndFound.Data;
 
 /// <summary>
-/// Minimal foundation seeding: the 4 roles + one starter Admin so the app is usable immediately.
-/// Idempotent (safe to run on every startup). Fuller seed data (sample members, categories,
-/// locations) belongs to the FR-AUTH-04 feature, not the base.
+/// Foundation seeding: the 4 roles + Starter Users (Admin, Staff, Member) for FR-AUTH-04.
+/// Idempotent (safe to run on every startup).
 /// </summary>
 public static class SeedData
 {
     public static readonly string[] Roles = { "Guest", "Member", "Staff", "Admin" };
 
-    // Starter admin — documented in docs/INDEX.md. Change the password before any real deployment.
     private const string AdminEmail = "admin@lostandfound.local";
     private const string AdminPassword = "Admin#12345";
 
@@ -26,11 +24,17 @@ public static class SeedData
         foreach (var role in Roles)
         {
             if (!await roleManager.RoleExistsAsync(role))
+            {
                 await roleManager.CreateAsync(new IdentityRole(role));
+            }
         }
 
         var userManager = sp.GetRequiredService<UserManager<ApplicationUser>>();
-        if (await userManager.FindByEmailAsync(AdminEmail) is null)
+
+        // ==========================================
+        // CODE GỐC CỦA BẠN BẠN (GIỮ NGUYÊN 100%)
+        // ==========================================
+        if (await userManager.FindByEmailAsync(AdminEmail) == null)
         {
             var admin = new ApplicationUser
             {
@@ -43,7 +47,55 @@ public static class SeedData
 
             var result = await userManager.CreateAsync(admin, AdminPassword);
             if (result.Succeeded)
+            {
                 await userManager.AddToRoleAsync(admin, "Admin");
+            }
+        }
+
+        // ==========================================
+        // CODE CỦA DEV B: TẠO TÀI KHOẢN STAFF MẪU (FR-AUTH-04)
+        // ==========================================   
+        string staffEmail = "staff@lostandfound.local";
+        if (await userManager.FindByEmailAsync(staffEmail) == null)
+        {
+            var staff = new ApplicationUser
+            {
+                UserName = staffEmail,
+                Email = staffEmail,
+                EmailConfirmed = true,
+                FullName = "Cán bộ Kho Khoản",
+                Department = "Phòng Công tác Sinh viên",
+                StudentOrStaffCode = "STF001"
+            };
+
+            var resultStaff = await userManager.CreateAsync(staff, "Staff#12345");
+            if (resultStaff.Succeeded)
+            {
+                await userManager.AddToRoleAsync(staff, "Staff");
+            }
+        }
+
+        // ==========================================
+        // CODE CỦA DEV B: TẠO TÀI KHOẢN MEMBER MẪU (FR-AUTH-04)
+        // ==========================================
+        string memberEmail = "member@lostandfound.local";
+        if (await userManager.FindByEmailAsync(memberEmail) == null)
+        {
+            var member = new ApplicationUser
+            {
+                UserName = memberEmail,
+                Email = memberEmail,
+                EmailConfirmed = true,
+                FullName = "Nguyễn Văn Sinh Viên",
+                Department = "Công nghệ thông tin",
+                StudentOrStaffCode = "SV123456"
+            };
+
+            var resultMember = await userManager.CreateAsync(member, "Member#12345");
+            if (resultMember.Succeeded)
+            {
+                await userManager.AddToRoleAsync(member, "Member");
+            }
         }
     }
 }
