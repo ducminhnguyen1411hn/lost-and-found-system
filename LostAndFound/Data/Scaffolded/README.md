@@ -21,5 +21,5 @@ The single runtime context is **`Data/ApplicationDbContext.cs`** (an `IdentityDb
    `DbSet`s / entity config into `ApplicationDbContext.OnModelCreating` (keep `base.OnModelCreating`
    first). Then **delete `ScaffoldDbContext.cs`** again.
 
-> The `/db-rescaffold` skill walks through this safely. AspNet* Identity tables are intentionally
-> excluded from the `--table` list (Identity owns them via `ApplicationDbContext`).
+> Follow the four manual steps above exactly (they are the safe path). AspNet* Identity tables are
+> intentionally excluded from the `--table` list (Identity owns them via `ApplicationDbContext`).

@@ -32,8 +32,6 @@ namespace LostAndFound.Controllers
                     UserId = user.Id,
                     FullName = user.FullName ?? "N/A",
                     Email = user.Email,
-                    Code = user.StudentOrStaffCode ?? "N/A",
-                    Department = user.Department ?? "N/A",
                     Roles = await _userManager.GetRolesAsync(user)
                 });
             }
