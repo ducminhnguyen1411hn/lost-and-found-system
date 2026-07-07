@@ -18,22 +18,16 @@
                     <span asp-validation-for="Input.FullName" class="text-danger small"></span>
                 </div>
 
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label text-dark">Student / staff code <span class="text-danger">*</span></label>
-                        <input asp-for="Input.StudentOrStaffCode" class="form-control" placeholder="SV123456" />
-                        <span asp-validation-for="Input.StudentOrStaffCode" class="text-danger small"></span>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label text-dark">Faculty / department</label>
-                        <input asp-for="Input.Department" class="form-control" placeholder="Faculty of IT" />
-                    </div>
+                <div class="mb-3">
+                    <label class="form-label text-dark">Email <span class="text-danger">*</span></label>
+                    <input asp-for="Input.Email" class="form-control" placeholder="name@school.edu" />
+                    <span asp-validation-for="Input.Email" class="text-danger small"></span>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label text-dark">Email <span class="text-danger">*</span></label>
-                    <input asp-for="Input.Email" class="form-control" placeholder="nva@student.edu.vn" />
-                    <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                    <label class="form-label text-dark">Phone number</label>
+                    <input asp-for="Input.PhoneNumber" class="form-control" placeholder="Optional" />
+                    <span asp-validation-for="Input.PhoneNumber" class="text-danger small"></span>
                 </div>
 
                 <div class="row mb-4">

@@ -71,16 +71,22 @@ BEGIN
         LockoutEnd           datetimeoffset(7) NULL,
         LockoutEnabled       bit               NOT NULL CONSTRAINT DF_AspNetUsers_LockoutEnabled DEFAULT (0),
         AccessFailedCount    int               NOT NULL CONSTRAINT DF_AspNetUsers_AccessFailed DEFAULT (0),
-        -- Project-specific columns (nullable so the default Identity register UI still works;
-        -- the FR-AUTH feature later makes FullName/StudentOrStaffCode required at the app layer).
-        FullName             nvarchar(200)     NULL,
-        StudentOrStaffCode   nvarchar(50)      NULL,
-        Department           nvarchar(150)     NULL
+        -- Project-specific profile column (nullable so the default Identity register UI still
+        -- works; the FR-AUTH feature makes FullName required at the app layer). This is a generic
+        -- *school* lost-and-found for ANY level — user profile = FullName + Email + PhoneNumber only.
+        FullName             nvarchar(200)     NULL
     );
     CREATE UNIQUE INDEX UserNameIndex ON dbo.AspNetUsers (NormalizedUserName) WHERE NormalizedUserName IS NOT NULL;
     CREATE INDEX EmailIndex ON dbo.AspNetUsers (NormalizedEmail);
-    -- Filtered unique: StudentOrStaffCode is unique when present, multiple NULLs allowed (NFR-05).
-    CREATE UNIQUE INDEX UX_AspNetUsers_StudentOrStaffCode ON dbo.AspNetUsers (StudentOrStaffCode) WHERE StudentOrStaffCode IS NOT NULL;
+END
+GO
+
+-- Reconcile older DBs: drop the legacy university-only profile columns if present (idempotent, no-op on fresh DB).
+IF OBJECT_ID(N'dbo.AspNetUsers', N'U') IS NOT NULL
+BEGIN
+    DROP INDEX IF EXISTS UX_AspNetUsers_StudentOrStaffCode ON dbo.AspNetUsers;
+    ALTER TABLE dbo.AspNetUsers DROP COLUMN IF EXISTS StudentOrStaffCode;
+    ALTER TABLE dbo.AspNetUsers DROP COLUMN IF EXISTS Department;
 END
 GO
 
@@ -167,7 +173,7 @@ BEGIN
 END
 GO
 
--- Location: a place inside the campus.
+-- Location: a place inside the school / site.
 IF OBJECT_ID(N'dbo.Location', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.Location (

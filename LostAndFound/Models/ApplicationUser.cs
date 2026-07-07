@@ -13,11 +13,4 @@ public class ApplicationUser : IdentityUser
     /// register page still works; the FR-AUTH feature makes it required at the app layer.</summary>
     public string? FullName { get; set; }
 
-    /// <summary>Student / staff code. Unique when present (filtered unique index).</summary>
-    public string? StudentOrStaffCode { get; set; }
-
-    /// <summary>Faculty / department.</summary>
-    public string? Department { get; set; }
-
-    // PhoneNumber is inherited from IdentityUser.
 }

@@ -28,8 +28,7 @@ namespace LostAndFound.Areas.Identity.Pages.Account
             [Required][StringLength(100, MinimumLength = 6)][DataType(DataType.Password)] public string Password { get; set; }
             [DataType(DataType.Password)][Compare("Password")] public string ConfirmPassword { get; set; }
             [Required] public string FullName { get; set; }
-            [Required] public string StudentOrStaffCode { get; set; }
-            public string Department { get; set; }
+            [Phone] public string PhoneNumber { get; set; }
         }
 
         public void OnGet(string returnUrl = null) => ReturnUrl = returnUrl;
@@ -44,8 +43,7 @@ namespace LostAndFound.Areas.Identity.Pages.Account
                     UserName = Input.Email,
                     Email = Input.Email,
                     FullName = Input.FullName,
-                    StudentOrStaffCode = Input.StudentOrStaffCode,
-                    Department = Input.Department,
+                    PhoneNumber = Input.PhoneNumber,
                     EmailConfirmed = true
                 };
                 var result = await _userManager.CreateAsync(user, Input.Password);

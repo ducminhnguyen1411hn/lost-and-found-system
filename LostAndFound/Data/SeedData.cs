@@ -32,7 +32,7 @@ public static class SeedData
         var userManager = sp.GetRequiredService<UserManager<ApplicationUser>>();
 
         // ==========================================
-        // CODE GỐC CỦA BẠN BẠN (GIỮ NGUYÊN 100%)
+        // Starter Admin
         // ==========================================
         if (await userManager.FindByEmailAsync(AdminEmail) == null)
         {
@@ -41,8 +41,7 @@ public static class SeedData
                 UserName = AdminEmail,
                 Email = AdminEmail,
                 EmailConfirmed = true,
-                FullName = "System Administrator",
-                Department = "IT"
+                FullName = "System Administrator"
             };
 
             var result = await userManager.CreateAsync(admin, AdminPassword);
@@ -53,8 +52,8 @@ public static class SeedData
         }
 
         // ==========================================
-        // CODE CỦA DEV B: TẠO TÀI KHOẢN STAFF MẪU (FR-AUTH-04)
-        // ==========================================   
+        // Sample Staff account (FR-AUTH-04)
+        // ==========================================
         string staffEmail = "staff@lostandfound.local";
         if (await userManager.FindByEmailAsync(staffEmail) == null)
         {
@@ -63,9 +62,7 @@ public static class SeedData
                 UserName = staffEmail,
                 Email = staffEmail,
                 EmailConfirmed = true,
-                FullName = "Cán bộ Kho Khoản",
-                Department = "Phòng Công tác Sinh viên",
-                StudentOrStaffCode = "STF001"
+                FullName = "Front-desk Staff"
             };
 
             var resultStaff = await userManager.CreateAsync(staff, "Staff#12345");
@@ -76,7 +73,7 @@ public static class SeedData
         }
 
         // ==========================================
-        // CODE CỦA DEV B: TẠO TÀI KHOẢN MEMBER MẪU (FR-AUTH-04)
+        // Sample Member account (FR-AUTH-04)
         // ==========================================
         string memberEmail = "member@lostandfound.local";
         if (await userManager.FindByEmailAsync(memberEmail) == null)
@@ -86,9 +83,7 @@ public static class SeedData
                 UserName = memberEmail,
                 Email = memberEmail,
                 EmailConfirmed = true,
-                FullName = "Nguyễn Văn Sinh Viên",
-                Department = "Công nghệ thông tin",
-                StudentOrStaffCode = "SV123456"
+                FullName = "Sample Member"
             };
 
             var resultMember = await userManager.CreateAsync(member, "Member#12345");
