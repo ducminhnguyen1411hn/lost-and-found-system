@@ -22,6 +22,9 @@ workflow**, **(3)** realtime **notifications**.
 1. This file → 2. `CLAUDE.md` (conventions, always loaded by Claude Code) → 3. `docs/BASE_SETUP.md`
 (how the foundation was built) → 4. the 5 spec docs in [`docs/specs/`](specs/).
 
+> 🚀 **New machine? Get it running first:** follow **[`docs/DEV_SETUP_VSCODE.md`](DEV_SETUP_VSCODE.md)**
+> — install · build · run in VSCode, step by step (incl. the mandatory first-run DB create).
+
 ## 3. Roles (ASP.NET Core Identity)
 | Role | Who | Can |
 |---|---|---|
@@ -95,6 +98,7 @@ The DB is the source of truth, not the C# classes.
 4. Copy new config into `Data/ApplicationDbContext.cs`. **No EF migrations.**
 
 ## 12. Getting started
+Full step-by-step (fresh machine, VSCode, F5 debug): **[`docs/DEV_SETUP_VSCODE.md`](DEV_SETUP_VSCODE.md)**.
 ```bash
 dotnet build LostAndFound/LostAndFound.csproj
 dotnet run   --project LostAndFound/LostAndFound.csproj   # http://localhost:5082 (https 7257)
