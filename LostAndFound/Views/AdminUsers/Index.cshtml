@@ -21,8 +21,6 @@
                 <tr class="text-muted" style="font-size: 0.9rem;">
                     <th class="fw-normal border-0 border-bottom pb-3">Email</th>
                     <th class="fw-normal border-0 border-bottom pb-3">Full name</th>
-                    <th class="fw-normal border-0 border-bottom pb-3">Code</th>
-                    <th class="fw-normal border-0 border-bottom pb-3">Dept</th>
                     <th class="fw-normal border-0 border-bottom pb-3">Roles</th>
                     <th class="fw-normal border-0 border-bottom pb-3"></th>
                 </tr>
@@ -33,8 +31,6 @@
                     <tr>
                         <td class="py-3 border-bottom">@user.Email</td>
                         <td class="py-3 border-bottom fw-medium text-dark">@user.FullName</td>
-                        <td class="py-3 border-bottom">@user.Code</td>
-                        <td class="py-3 border-bottom">@user.Department</td>
                         <td class="py-3 border-bottom">
                             @if (!user.Roles.Any())
                             {

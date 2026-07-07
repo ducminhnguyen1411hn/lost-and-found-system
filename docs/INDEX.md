@@ -36,7 +36,7 @@ workflow**, **(3)** realtime **notifications**.
 Claim-approval rights follow **who holds the item** (`HoldingType`), not the role directly.
 
 ## 4. Data model (summary)
-Entities: `ApplicationUser` (Identity + FullName/StudentOrStaffCode/Department), `Category`
+Entities: `ApplicationUser` (Identity; profile = FullName + Email + PhoneNumber — no school-specific fields), `Category`
 (self-ref, 2-level), `Location`, `LostAlert` (watch subscription), `FoundItem`, `Tag`
 (DisplayTag + **NormalizedTag UNIQUE**), `FoundItemTag`, `LostAlertTag`, `Claim`,
 `CameraCheckRequest`, `ThankYou`, `Notification`, `AuditLog`. Full DDL = **`LostAndFound/db/schema.sql`**.
