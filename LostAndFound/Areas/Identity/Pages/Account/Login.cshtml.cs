@@ -12,18 +12,14 @@ namespace LostAndFound.Areas.Identity.Pages.Account
     public class LoginModel : PageModel
     {
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly ILogger<LoginModel> _logger;
 
-        public LoginModel(SignInManager<ApplicationUser> signInManager, ILogger<LoginModel> logger)
+        public LoginModel(SignInManager<ApplicationUser> signInManager)
         {
             _signInManager = signInManager;
-            _logger = logger;
         }
 
         [BindProperty]
         public InputModel Input { get; set; }
-
-        public IList<AuthenticationScheme> ExternalLogins { get; set; }
 
         public string ReturnUrl { get; set; }
 
@@ -56,9 +52,6 @@ namespace LostAndFound.Areas.Identity.Pages.Account
             // Xóa cookie cũ để đảm bảo phiên đăng nhập mới sạch sẽ
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
 
-            // Lấy danh sách external login providers
-            ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
-
             ReturnUrl = returnUrl;
         }
 
@@ -66,15 +59,12 @@ namespace LostAndFound.Areas.Identity.Pages.Account
         {
             returnUrl ??= Url.Content("~/");
 
-            ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
-
             if (ModelState.IsValid)
             {
                 // Thực hiện đăng nhập bằng Email và Password
                 var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
                 if (result.Succeeded)
                 {
-                    _logger.LogInformation("User logged in.");
                     return LocalRedirect(returnUrl);
                 }
 
@@ -83,22 +73,6 @@ namespace LostAndFound.Areas.Identity.Pages.Account
             }
 
             return Page();
-        }
-
-        /// <summary>
-        /// POST handler: Khởi động quy trình external login (Google)
-        /// Luôn hiển thị màn hình chọn tài khoản Google
-        /// </summary>
-        public IActionResult OnPostExternalLogin(string provider, string returnUrl = null)
-        {
-            // Redirect tới external login provider
-            var redirectUrl = Url.Page("./ExternalLogin", pageHandler: "Callback", values: new { returnUrl });
-            var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
-
-            // ⭐ THÊM DÒNG NÀY: Luôn hiển thị màn hình chọn tài khoản
-            properties.SetParameter("prompt", "select_account");
-
-            return new ChallengeResult(provider, properties);
         }
     }
 }

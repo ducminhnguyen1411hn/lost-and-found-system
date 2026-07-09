@@ -1,58 +1,49 @@
-## .NET / Visual Studio
+# Development credentials (NEVER commit)
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Staging.json
 
-# Build output
-[Bb]in/
-[Oo]bj/
-[Oo]ut/
-[Dd]ebug/
-[Rr]elease/
-x64/
-x86/
-[Aa][Rr][Mm]/
-[Aa][Rr][Mm]64/
-artifacts/
+# User Secrets
+%APPDATA%/Microsoft/UserSecrets/
+.env
+.env.local
 
-# Visual Studio / Rider / VS Code
+# Visual Studio
 .vs/
 .vscode/
-.idea/
 *.user
-*.suo
 *.userprefs
-*.userosscache
+*.suo
 *.sln.docstates
-*_i.c
-*_p.c
 
-# Rider
-*.DotSettings.user
-
-# Build / test results
-[Tt]est[Rr]esult*/
-[Bb]uild[Ll]og.*
-*.binlog
-project.lock.json
-project.fragment.lock.json
+# Build outputs
+bin/
+obj/
+dist/
 
 # NuGet
 *.nupkg
-*.snupkg
-**/packages/*
-!**/packages/build/
-*.nuget.props
-*.nuget.targets
+.nuget/
+packages/
 
-# ASP.NET / EF
+# Node (if using any frontend build tools)
+node_modules/
+npm-debug.log
+
+# Database
 *.mdf
 *.ldf
-*.ndf
-appsettings.*.local.json
+*.db
+*.sqlite
 
-# User-specific secrets (use `dotnet user-secrets` for real secrets; do NOT commit them)
-secrets.json
-
-# OS
+# macOS
 .DS_Store
-Thumbs.db
 
-docs/superpowers/
+# Rider
+.idea/
+.idea_modules/
+*.sln.iml
+
+# Logs
+logs/
+*.log
