@@ -291,11 +291,14 @@ GO
 
 -- Reconcile older DBs: migrate the legacy single FoundItem.ImagePath into FoundItemImage (as the
 -- cover, SortOrder 0) and drop the column. Idempotent: runs only while the column still exists.
+-- Wrapped in dynamic SQL: on a FRESH DB the column doesn't exist, and column names aren't covered by
+-- deferred name resolution, so a static reference would fail the whole batch with "Invalid column name".
 IF COL_LENGTH(N'dbo.FoundItem', N'ImagePath') IS NOT NULL
 BEGIN
-    INSERT INTO dbo.FoundItemImage (FoundItemId, Url, SortOrder)
-    SELECT Id, ImagePath, 0 FROM dbo.FoundItem WHERE ImagePath IS NOT NULL AND ImagePath <> N'';
-    ALTER TABLE dbo.FoundItem DROP COLUMN ImagePath;
+    EXEC sys.sp_executesql N'
+        INSERT INTO dbo.FoundItemImage (FoundItemId, Url, SortOrder)
+        SELECT Id, ImagePath, 0 FROM dbo.FoundItem WHERE ImagePath IS NOT NULL AND ImagePath <> N'''';
+        ALTER TABLE dbo.FoundItem DROP COLUMN ImagePath;';
 END
 GO
 
