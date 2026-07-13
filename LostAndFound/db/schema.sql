@@ -236,8 +236,9 @@ BEGIN
         Status                    int            NOT NULL CONSTRAINT DF_FoundItem_Status DEFAULT (1), -- 1 = Open
         HoldingType               int            NOT NULL CONSTRAINT DF_FoundItem_HoldingType DEFAULT (0), -- 0 = SelfHeld
         StorageLocation           nvarchar(200)  NULL,
-        ImagePath                 nvarchar(400)  NULL,
         PrivateMarks              nvarchar(1000) NULL,  -- HIDDEN: never shown on public views
+        -- NOTE: images live in the child table dbo.FoundItemImage (1-to-many). The legacy single
+        -- ImagePath column was removed; existing values are migrated below.
         ReporterUserId            nvarchar(450)  NOT NULL,
         CustodianStaffId          nvarchar(450)  NULL,
         HolderConfirmedHandover   bit            NOT NULL CONSTRAINT DF_FoundItem_HolderConfirmed DEFAULT (0),
@@ -270,6 +271,34 @@ BEGIN
         CONSTRAINT FK_FoundItemTag_Tag_TagId             FOREIGN KEY (TagId)       REFERENCES dbo.Tag (Id)       ON DELETE NO ACTION
     );
     CREATE INDEX IX_FoundItemTag_TagId ON dbo.FoundItemTag (TagId);
+END
+GO
+
+-- FoundItemImage: 1-to-many photos of a FoundItem. The COVER image is the row with the lowest
+-- SortOrder (0); the rest are the "other" images. Cascade-deletes with its FoundItem.
+IF OBJECT_ID(N'dbo.FoundItemImage', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.FoundItemImage (
+        Id          int           NOT NULL IDENTITY(1,1) CONSTRAINT PK_FoundItemImage PRIMARY KEY,
+        FoundItemId int           NOT NULL,
+        Url         nvarchar(400) NOT NULL,
+        SortOrder   int           NOT NULL CONSTRAINT DF_FoundItemImage_SortOrder DEFAULT (0),
+        CONSTRAINT FK_FoundItemImage_FoundItem_FoundItemId FOREIGN KEY (FoundItemId) REFERENCES dbo.FoundItem (Id) ON DELETE CASCADE
+    );
+    CREATE INDEX IX_FoundItemImage_FoundItemId ON dbo.FoundItemImage (FoundItemId);
+END
+GO
+
+-- Reconcile older DBs: migrate the legacy single FoundItem.ImagePath into FoundItemImage (as the
+-- cover, SortOrder 0) and drop the column. Idempotent: runs only while the column still exists.
+-- Wrapped in dynamic SQL: on a FRESH DB the column doesn't exist, and column names aren't covered by
+-- deferred name resolution, so a static reference would fail the whole batch with "Invalid column name".
+IF COL_LENGTH(N'dbo.FoundItem', N'ImagePath') IS NOT NULL
+BEGIN
+    EXEC sys.sp_executesql N'
+        INSERT INTO dbo.FoundItemImage (FoundItemId, Url, SortOrder)
+        SELECT Id, ImagePath, 0 FROM dbo.FoundItem WHERE ImagePath IS NOT NULL AND ImagePath <> N'''';
+        ALTER TABLE dbo.FoundItem DROP COLUMN ImagePath;';
 END
 GO
 

@@ -15,7 +15,7 @@ The single runtime context is **`Data/ApplicationDbContext.cs`** (an `IdentityDb
    ```
 3. Re-run the scaffold (regenerates `Models/Entities` + a fresh `ScaffoldDbContext` here):
    ```
-   dotnet ef dbcontext scaffold "Server=(localdb)\MSSQLLocalDB;Database=LostAndFound;Trusted_Connection=True;TrustServerCertificate=True" Microsoft.EntityFrameworkCore.SqlServer --context ScaffoldDbContext --context-dir Data/Scaffolded --output-dir Models/Entities --no-onconfiguring --use-database-names --no-pluralize --force --table Category --table Location --table LostAlert --table FoundItem --table Tag --table FoundItemTag --table LostAlertTag --table Claim --table CameraCheckRequest --table ThankYou --table Notification --table AuditLog
+   dotnet ef dbcontext scaffold "Server=(localdb)\MSSQLLocalDB;Database=LostAndFound;Trusted_Connection=True;TrustServerCertificate=True" Microsoft.EntityFrameworkCore.SqlServer --context ScaffoldDbContext --context-dir Data/Scaffolded --output-dir Models/Entities --no-onconfiguring --use-database-names --no-pluralize --force --table Category --table Location --table LostAlert --table FoundItem --table Tag --table FoundItemTag --table LostAlertTag --table Claim --table CameraCheckRequest --table ThankYou --table Notification --table AuditLog --table FoundItemImage
    ```
 4. Diff the regenerated `ScaffoldDbContext.cs` against `ApplicationDbContext.cs`; copy any **new**
    `DbSet`s / entity config into `ApplicationDbContext.OnModelCreating` (keep `base.OnModelCreating`

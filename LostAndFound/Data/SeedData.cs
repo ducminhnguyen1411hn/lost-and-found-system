@@ -1,5 +1,8 @@
 using LostAndFound.Models;
+using LostAndFound.Models.Entities;
+using LostAndFound.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LostAndFound.Data;
@@ -92,5 +95,55 @@ public static class SeedData
                 await userManager.AddToRoleAsync(member, "Member");
             }
         }
+
+        // ==========================================
+        // Sample master data (FR-AUTH-04): 2-level Category + Location.
+        // Needed by the FR-FOUND report form dropdowns. Idempotent.
+        // ==========================================
+        var db = sp.GetRequiredService<ApplicationDbContext>();
+
+        if (!await db.Category.AnyAsync())
+        {
+            // 2-level Vietnamese category tree. A parent with no children (e.g. "Khác") is itself selectable.
+            var tree = new (string Parent, string[] Children)[]
+            {
+                ("Điện tử", new[] { "Điện thoại", "Laptop", "Máy tính bảng", "Tai nghe", "Sạc & Cáp", "Chuột & Bàn phím", "Đồng hồ thông minh" }),
+                ("Giấy tờ", new[] { "Thẻ sinh viên", "CCCD/CMND", "Bằng lái xe", "Thẻ ngân hàng/ATM", "Sổ & Vở" }),
+                ("Ví & Túi", new[] { "Ví/Bóp", "Túi xách", "Balo", "Túi đựng laptop" }),
+                ("Đồ dùng cá nhân", new[] { "Chìa khoá", "Kính mắt", "Ô/Dù", "Bình giữ nhiệt", "Mũ/Nón", "Đồng hồ đeo tay" }),
+                ("Trang phục", new[] { "Áo khoác", "Khăn choàng", "Giày/Dép" }),
+                ("Khác", Array.Empty<string>()),
+            };
+            foreach (var (parent, children) in tree)
+            {
+                var p = new Category { Name = parent };
+                db.Category.Add(p);
+                await db.SaveChangesAsync(); // assign parent Id
+                foreach (var ch in children)
+                    db.Category.Add(new Category { Name = ch, ParentId = p.Id });
+            }
+            await db.SaveChangesAsync();
+        }
+
+        if (!await db.Location.AnyAsync())
+        {
+            db.Location.AddRange(
+                new Location { Name = "Thư viện trung tâm" },
+                new Location { Building = "Toà A", Name = "Căng tin" },
+                new Location { Building = "Toà H1", Name = "Giảng đường 101" },
+                new Location { Building = "Toà H2", Name = "Giảng đường 205" },
+                new Location { Name = "Sảnh chính" },
+                new Location { Name = "Bãi giữ xe" },
+                new Location { Name = "Sân vận động" },
+                new Location { Name = "Ký túc xá khu B" },
+                new Location { Name = "Phòng bảo vệ" },
+                new Location { Name = "Hội trường lớn" },
+                new Location { Name = "Phòng thí nghiệm B4" },
+                new Location { Name = "Nhà xe sinh viên" });
+            await db.SaveChangesAsync();
+        }
+
+        // Demo dataset (~100 posts + users + images + tags + audit). Runs once, when there are no items.
+        await SeedDemoData.SeedAsync(db, userManager, sp.GetRequiredService<ITagService>());
     }
 }

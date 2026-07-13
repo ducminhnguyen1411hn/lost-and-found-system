@@ -1,0 +1,34 @@
+@*
+    Reusable tag input (FR-TAG). Convention: the owning ViewModel exposes a string property named
+    `TagsRaw`; this partial binds to it by name. Comma-separated; a small script renders a live chip
+    preview but the text field stays the source of truth (works fine without JS). Autocomplete = FR-TAG-04 (later).
+    Usage: <partial name="_TagInput" model="@Model.TagsRaw" />
+*@
+@model string
+
+<div data-tag-input>
+    <input type="text" name="TagsRaw" id="TagsRaw" value="@Model" class="form-control"
+           placeholder="Ví dụ: ví da, thẻ sinh viên, chìa khoá" autocomplete="off" />
+    <div class="form-text">Phân tách các thẻ bằng dấu phẩy. Thẻ giúp người mất đồ tìm ra & để hệ thống so khớp.</div>
+    <div class="mt-2" data-tag-preview></div>
+</div>
+
+<script>
+    (function () {
+        var wrap = document.currentScript.previousElementSibling;
+        var input = wrap.querySelector('#TagsRaw');
+        var preview = wrap.querySelector('[data-tag-preview]');
+        function render() {
+            preview.innerHTML = '';
+            input.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean)
+                .forEach(function (t) {
+                    var b = document.createElement('span');
+                    b.className = 'badge bg-secondary me-1';
+                    b.textContent = t;
+                    preview.appendChild(b);
+                });
+        }
+        input.addEventListener('input', render);
+        render();
+    })();
+</script>

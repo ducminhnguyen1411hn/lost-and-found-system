@@ -28,6 +28,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<LostAlert> LostAlert => Set<LostAlert>();
     public DbSet<LostAlertTag> LostAlertTag => Set<LostAlertTag>();
     public DbSet<FoundItem> FoundItem => Set<FoundItem>();
+    public DbSet<FoundItemImage> FoundItemImage => Set<FoundItemImage>();
     public DbSet<FoundItemTag> FoundItemTag => Set<FoundItemTag>();
     public DbSet<Claim> Claim => Set<Claim>();
     public DbSet<CameraCheckRequest> CameraCheckRequest => Set<CameraCheckRequest>();
@@ -113,9 +114,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
             entity.Property(e => e.Description).HasMaxLength(2000);
-            entity.Property(e => e.ImagePath).HasMaxLength(400);
             entity.Property(e => e.PrivateMarks).HasMaxLength(1000);
-            entity.Property(e => e.Status).HasDefaultValue(1);
+            // NOTE: intentionally NOT HasDefaultValue(1). With an EF store-default, EF treats the CLR
+            // default (0 == PendingDropoff, a real Custodial status) as "unset" and omits it on INSERT,
+            // so Custodial items would wrongly persist as Open. The service always sets Status explicitly;
+            // the DB column default 1 still guards raw inserts. Keep this removed after any re-scaffold.
             entity.Property(e => e.StorageLocation).HasMaxLength(200);
             entity.Property(e => e.Title).HasMaxLength(200);
 
@@ -126,6 +129,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasOne(d => d.Location).WithMany(p => p.FoundItem)
                 .HasForeignKey(d => d.LocationId)
                 .OnDelete(DeleteBehavior.ClientSetNull);
+        });
+
+        modelBuilder.Entity<FoundItemImage>(entity =>
+        {
+            entity.HasIndex(e => e.FoundItemId, "IX_FoundItemImage_FoundItemId");
+
+            entity.Property(e => e.Url).HasMaxLength(400);
+
+            entity.HasOne(d => d.FoundItem).WithMany(p => p.FoundItemImage).HasForeignKey(d => d.FoundItemId);
         });
 
         modelBuilder.Entity<FoundItemTag>(entity =>

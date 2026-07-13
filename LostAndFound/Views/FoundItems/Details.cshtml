@@ -1,0 +1,145 @@
+@model FoundItemDetailViewModel
+@{
+    ViewData["Title"] = Model.Title;
+    string statusText = Model.Status switch
+    {
+        FoundItemStatus.PendingDropoff => "Chờ bàn giao cho Staff",
+        FoundItemStatus.Open => "Đang mở (có thể nhận)",
+        FoundItemStatus.ClaimAccepted => "Đã duyệt yêu cầu nhận",
+        FoundItemStatus.Returned => "Đã trả",
+        FoundItemStatus.Unclaimed => "Quá hạn không ai nhận",
+        FoundItemStatus.Disposed => "Đã thanh lý",
+        _ => Model.Status.ToString()
+    };
+    string holdingText = Model.HoldingType == HoldingType.Custodial ? "Ký gửi cho Staff" : "Người nhặt tự giữ";
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+
+<div class="d-flex justify-content-between align-items-center">
+    <a asp-action="Index" class="text-decoration-none">&larr; Quay lại danh sách</a>
+    @if (Model.CanEdit)
+    {
+        <div>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-sm">✏️ Sửa</a>
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline"
+                  onsubmit="return confirm('Xoá bài đăng này? Không thể hoàn tác.');">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-danger btn-sm">🗑 Xoá</button>
+            </form>
+        </div>
+    }
+</div>
+
+<div class="row">
+    <div class="col-md-5 mb-3">
+        @if (Model.ImagePaths.Count == 0)
+        {
+            <div class="bg-light d-flex align-items-center justify-content-center text-muted rounded" style="height:260px;">
+                <span>Không có ảnh</span>
+            </div>
+        }
+        else if (Model.ImagePaths.Count == 1)
+        {
+            <img src="@Model.ImagePaths[0]" class="img-fluid rounded shadow-sm" alt="@Model.Title" />
+        }
+        else
+        {
+            <div id="itemImages" class="carousel slide">
+                <div class="carousel-inner rounded shadow-sm bg-light">
+                    @for (int i = 0; i < Model.ImagePaths.Count; i++)
+                    {
+                        <div class="carousel-item @(i == 0 ? "active" : "")">
+                            <img src="@Model.ImagePaths[i]" class="d-block w-100" style="height:340px;object-fit:contain;" alt="@Model.Title" />
+                        </div>
+                    }
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#itemImages" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon bg-dark rounded"></span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#itemImages" data-bs-slide="next">
+                    <span class="carousel-control-next-icon bg-dark rounded"></span>
+                </button>
+                <div class="carousel-indicators">
+                    @for (int i = 0; i < Model.ImagePaths.Count; i++)
+                    {
+                        <button type="button" data-bs-target="#itemImages" data-bs-slide-to="@i" class="@(i == 0 ? "active" : "")" aria-label="Ảnh @(i + 1)"></button>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+    <div class="col-md-7">
+        <h1 class="h3">@Model.Title</h1>
+        <div class="mb-3">
+            <span class="badge bg-info text-dark">@statusText</span>
+            <span class="badge bg-light text-dark border">@holdingText</span>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Description))
+        {
+            <p>@Model.Description</p>
+        }
+
+        <dl class="row mb-2">
+            <dt class="col-sm-4">Danh mục</dt>
+            <dd class="col-sm-8">@Model.CategoryName</dd>
+            <dt class="col-sm-4">Nơi nhặt được</dt>
+            <dd class="col-sm-8">@Model.LocationName</dd>
+            <dt class="col-sm-4">Thời điểm nhặt</dt>
+            <dd class="col-sm-8">@AppTime.ToLocal(Model.FoundAt).ToString("dd/MM/yyyy HH:mm")</dd>
+            <dt class="col-sm-4">Người nhặt</dt>
+            <dd class="col-sm-8">@Model.ReporterName</dd>
+        </dl>
+
+        @if (Model.DisplayTags.Count > 0)
+        {
+            <div class="mb-3">
+                @foreach (var t in Model.DisplayTags)
+                {
+                    <span class="badge bg-secondary me-1">@t</span>
+                }
+            </div>
+        }
+
+        @if (Model.CanSeePrivate)
+        {
+            <div class="card border-warning mb-3">
+                <div class="card-header bg-warning-subtle">
+                    🔒 Chỉ bạn &amp; người giữ / Staff thấy được
+                </div>
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-1 text-muted">Đặc điểm nhận dạng riêng</h6>
+                    <p class="card-text">@(string.IsNullOrWhiteSpace(Model.PrivateMarks) ? "(chưa ghi)" : Model.PrivateMarks)</p>
+                    @if (!string.IsNullOrWhiteSpace(Model.StorageLocation))
+                    {
+                        <h6 class="card-subtitle mb-1 text-muted">Nơi cất giữ</h6>
+                        <p class="card-text mb-0">@Model.StorageLocation</p>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@if (Model.PublicEvents.Count > 0)
+{
+    <hr />
+    <h2 class="h5">Lịch sử</h2>
+    <ul class="list-group list-group-flush">
+        @foreach (var e in Model.PublicEvents)
+        {
+            <li class="list-group-item px-0">
+                <span class="text-muted small">@AppTime.ToLocal(e.At).ToString("dd/MM/yyyy HH:mm")</span>
+                — @(string.IsNullOrWhiteSpace(e.Detail) ? e.Action : e.Detail)
+                @if (!string.IsNullOrEmpty(e.ActorName))
+                {
+                    <span class="text-muted small">· bởi @e.ActorName</span>
+                }
+            </li>
+        }
+    </ul>
+}

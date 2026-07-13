@@ -21,6 +21,8 @@
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.*" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.23" />
     <!-- SignalR server needs no package: it ships in the Microsoft.AspNetCore.App framework reference. -->
+    <!-- Third-party image host for found-item photos (FR-FOUND-05). Not a Microsoft.* pkg, so exempt from the 8.0.x pin. -->
+    <PackageReference Include="CloudinaryDotNet" Version="1.27.*" />
   </ItemGroup>
 
 </Project>
