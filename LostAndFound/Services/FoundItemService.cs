@@ -175,17 +175,21 @@ public class FoundItemService : IFoundItemService
             .Select(u => u.FullName ?? u.Email)
             .FirstOrDefaultAsync() ?? "N/A";
 
-        var events = await _db.AuditLog.AsNoTracking()
-            .Where(a => a.EntityType == "FoundItem" && a.EntityId == id.ToString() && a.IsPublic)
-            .OrderBy(a => a.CreatedAt)
-            .Select(a => new FoundItemDetailViewModel.PublicEvent
+        // Left-join Users for the actor's display name (ActorUserId is a plain FK, no navigation).
+        var events = await (
+            from a in _db.AuditLog.AsNoTracking()
+            join usr in _db.Users.AsNoTracking() on a.ActorUserId equals usr.Id into au
+            from usr in au.DefaultIfEmpty()
+            where a.EntityType == "FoundItem" && a.EntityId == id.ToString() && a.IsPublic
+            orderby a.CreatedAt
+            select new FoundItemDetailViewModel.PublicEvent
             {
                 At = a.CreatedAt,
                 Action = a.Action,
                 ToStatus = a.ToStatus,
-                Detail = a.Detail
-            })
-            .ToListAsync();
+                Detail = a.Detail,
+                ActorName = usr != null ? (usr.FullName ?? usr.Email) : null
+            }).ToListAsync();
 
         return new FoundItemDetailViewModel
         {

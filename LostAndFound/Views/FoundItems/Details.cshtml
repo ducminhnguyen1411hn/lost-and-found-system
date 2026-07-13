@@ -135,6 +135,10 @@
             <li class="list-group-item px-0">
                 <span class="text-muted small">@e.At.ToString("dd/MM/yyyy HH:mm")</span>
                 — @(string.IsNullOrWhiteSpace(e.Detail) ? e.Action : e.Detail)
+                @if (!string.IsNullOrEmpty(e.ActorName))
+                {
+                    <span class="text-muted small">· bởi @e.ActorName</span>
+                }
             </li>
         }
     </ul>

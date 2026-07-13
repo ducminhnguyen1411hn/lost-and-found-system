@@ -35,5 +35,6 @@ public class FoundItemDetailViewModel
         public string Action { get; init; } = string.Empty;
         public string? ToStatus { get; init; }
         public string? Detail { get; init; }
+        public string? ActorName { get; init; } // who performed it (null for system events)
     }
 }
