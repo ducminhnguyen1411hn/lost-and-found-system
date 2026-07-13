@@ -25,7 +25,7 @@ sqlcmd -S "(localdb)\MSSQLLocalDB" -b -i LostAndFound/db/schema.sql
 Run from the repo root. `--force` overwrites the generated files; AspNet* Identity tables are
 intentionally excluded (Identity owns them via `ApplicationDbContext`):
 ```
-dotnet ef dbcontext scaffold "Server=(localdb)\MSSQLLocalDB;Database=LostAndFound;Trusted_Connection=True;TrustServerCertificate=True" Microsoft.EntityFrameworkCore.SqlServer --project LostAndFound/LostAndFound.csproj --context ScaffoldDbContext --context-dir Data/Scaffolded --output-dir Models/Entities --no-onconfiguring --use-database-names --no-pluralize --force --table Category --table Location --table LostAlert --table FoundItem --table Tag --table FoundItemTag --table LostAlertTag --table Claim --table CameraCheckRequest --table ThankYou --table Notification --table AuditLog
+dotnet ef dbcontext scaffold "Server=(localdb)\MSSQLLocalDB;Database=LostAndFound;Trusted_Connection=True;TrustServerCertificate=True" Microsoft.EntityFrameworkCore.SqlServer --project LostAndFound/LostAndFound.csproj --context ScaffoldDbContext --context-dir Data/Scaffolded --output-dir Models/Entities --no-onconfiguring --use-database-names --no-pluralize --force --table Category --table Location --table LostAlert --table FoundItem --table Tag --table FoundItemTag --table LostAlertTag --table Claim --table CameraCheckRequest --table ThankYou --table Notification --table AuditLog --table FoundItemImage
 ```
 > Add `--table <NewTable>` for any new domain table.
 
