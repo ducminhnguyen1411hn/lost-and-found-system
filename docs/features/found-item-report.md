@@ -31,7 +31,7 @@
 - **Scope:** owner-only (not even Admin), allowed only while `Open`/`PendingDropoff` **and no claim exists** (mirrors the "item with a Pending claim is locked" invariant). `HoldingType` is read-only on edit.
 - **Service:** `GetForEditAsync` / `UpdateAsync` / `DeleteAsync` + private `IsEditableAsync`. Update replaces the tag set by **RemoveRange old joins → SaveChanges → add resolved → SaveChanges** (two saves inside the tx to avoid a `UX_FoundItemTag_Item_Tag` clash). New image replaces old; empty keeps old. Delete relies on the `FoundItemTag` cascade FK.
 - **Detail VM:** added `CanEdit` (owner && editable && no claim) → drives the Sửa/Xoá buttons.
-- **AuditLog:** `"Updated"` / `"Deleted"` with `IsPublic=false` (internal — don't surface edit noise or leak what changed).
+- **AuditLog:** `"Updated"` is **`IsPublic=true`** (shows "Cập nhật bài đăng" in the timeline — the detail is a generic label, never field values). `"Deleted"` stays `IsPublic=false` (the item is gone, so its timeline is unreachable anyway).
 - **Verified at runtime:** owner edit changes title+tags; non-owner (admin) Edit → 404; delete removes item (Details 404, gone from list).
 - **Gotcha:** run-lock — if the app is already running, `dotnet build` fails only on the *exe copy* (`MSB3027`); build to a temp `-o` dir to verify compilation without stopping the running instance.
 

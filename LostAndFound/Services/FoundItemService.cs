@@ -289,8 +289,9 @@ public class FoundItemService : IFoundItemService
             _db.FoundItemTag.Add(new FoundItemTag { FoundItemId = item.Id, Tag = tag });
         await _db.SaveChangesAsync();
 
+        // Public so the edit shows in the item's timeline. Detail is a generic label — never field values.
         await _audit.LogAsync(userId, "Updated", "FoundItem", item.Id.ToString(),
-            null, ((FoundItemStatus)item.Status).ToString(), "Cập nhật bài đăng", isPublic: false);
+            null, null, "Cập nhật bài đăng", isPublic: true);
 
         await tx.CommitAsync();
         return true;
