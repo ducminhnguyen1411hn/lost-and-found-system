@@ -33,12 +33,12 @@
         <input asp-for="Tag" class="form-control" placeholder="thẻ..." />
     </div>
     <div class="col-md-4">
-        <label asp-for="FoundFrom" class="form-label">Nhặt từ ngày</label>
-        <input asp-for="FoundFrom" type="date" class="form-control" />
+        <label asp-for="FoundFrom" class="form-label">Nhặt từ</label>
+        <input asp-for="FoundFrom" type="datetime-local" class="form-control" />
     </div>
     <div class="col-md-4">
-        <label asp-for="FoundTo" class="form-label">Đến ngày</label>
-        <input asp-for="FoundTo" type="date" class="form-control" />
+        <label asp-for="FoundTo" class="form-label">Đến</label>
+        <input asp-for="FoundTo" type="datetime-local" class="form-control" />
     </div>
     <div class="col-12">
         <button type="submit" class="btn btn-outline-primary">Tìm kiếm</button>
