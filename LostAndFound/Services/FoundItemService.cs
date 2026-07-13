@@ -121,6 +121,7 @@ public class FoundItemService : IFoundItemService
             {
                 Id = f.Id,
                 Title = f.Title,
+                Description = f.Description,
                 CategoryName = f.Category.Name,
                 LocationName = f.Location.Name,
                 FoundAt = f.FoundAt,
