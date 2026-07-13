@@ -1,3 +1,54 @@
+<<<<<<< HEAD
+# Development credentials (NEVER commit)
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Staging.json
+
+# User Secrets
+%APPDATA%/Microsoft/UserSecrets/
+.env
+.env.local
+
+# Visual Studio
+.vs/
+.vscode/
+*.user
+*.userprefs
+*.suo
+*.sln.docstates
+
+# Build outputs
+bin/
+obj/
+dist/
+
+# NuGet
+*.nupkg
+.nuget/
+packages/
+
+# Node (if using any frontend build tools)
+node_modules/
+npm-debug.log
+
+# Database
+*.mdf
+*.ldf
+*.db
+*.sqlite
+
+# macOS
+.DS_Store
+
+# Rider
+.idea/
+.idea_modules/
+*.sln.iml
+
+# Logs
+logs/
+*.log
+=======
 ## .NET / Visual Studio
 
 # Build output
@@ -56,3 +107,4 @@ secrets.json
 Thumbs.db
 
 docs/superpowers/
+>>>>>>> 887ef47b514b5598d47de13f926389f5bd225205

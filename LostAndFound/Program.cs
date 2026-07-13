@@ -21,24 +21,29 @@ namespace LostAndFound
             builder.Services
                 .AddDefaultIdentity<ApplicationUser>(options =>
                 {
-                    options.SignIn.RequireConfirmedAccount = false; // simplest for a campus app
+                    options.SignIn.RequireConfirmedAccount = false;
                 })
                 .AddRoles<IdentityRole>()
                 .AddEntityFrameworkStores<ApplicationDbContext>();
 
-            // ---- MVC + Razor Pages (default Identity UI) + SignalR ----
+            // ---- OAuth 2.0 Authentication (Google) ----
+            builder.Services.AddAuthentication()
+                .AddGoogle(options =>
+                {
+                    options.ClientId = builder.Configuration["Authentication:Google:ClientId"]
+                        ?? throw new InvalidOperationException("Google ClientId not found in configuration.");
+                    options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]
+                        ?? throw new InvalidOperationException("Google ClientSecret not found in configuration.");
+                });
+
+            // ---- MVC + Razor Pages + SignalR ----
             builder.Services.AddControllersWithViews();
             builder.Services.AddRazorPages();
             builder.Services.AddSignalR();
 
-            // ---- Feature services: register when implemented (left commented on purpose) ----
-            // builder.Services.AddScoped<ITagService, TagService>();
-            // builder.Services.AddScoped<INotificationService, NotificationService>();
-            // builder.Services.AddScoped<IAuditService, AuditService>();
-
             var app = builder.Build();
 
-            // Seed the 4 roles + a starter Admin account (idempotent).
+            // Seed the 4 roles + starter Admin account
             await SeedData.InitializeAsync(app.Services);
 
             // ---- HTTP request pipeline ----
@@ -50,17 +55,15 @@ namespace LostAndFound
 
             app.UseHttpsRedirection();
             app.UseStaticFiles();
-
             app.UseRouting();
 
-            app.UseAuthentication(); // must come before UseAuthorization
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllerRoute(
                 name: "default",
                 pattern: "{controller=Home}/{action=Index}/{id?}");
-            app.MapRazorPages(); // serves the default Identity UI (/Identity/Account/Login etc.)
-            // app.MapHub<YourHub>("/hubs/your-hub"); // add when the first SignalR hub lands
+            app.MapRazorPages();
 
             await app.RunAsync();
         }
