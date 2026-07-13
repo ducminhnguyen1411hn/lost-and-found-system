@@ -1,0 +1,77 @@
+@model LostItemCreateViewModel
+@{
+    ViewData["Title"] = "Đăng đồ bị mất";
+    var nowMax = AppTime.LocalNow.ToString("yyyy-MM-ddTHH:mm");
+}
+
+<h1 class="h3 mb-3">Đăng đồ bị mất</h1>
+
+<form asp-action="Create" method="post" enctype="multipart/form-data">
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="mb-3">
+                <label asp-for="Title" class="form-label"></label>
+                <input asp-for="Title" class="form-control" />
+                <span asp-validation-for="Title" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label"></label>
+                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                <div class="form-text">Mô tả càng chi tiết càng dễ được nhận ra.</div>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+
+            <div class="row">
+                <div class="col-sm-6 mb-3">
+                    <label asp-for="CategoryId" class="form-label"></label>
+                    <select asp-for="CategoryId" asp-items="Model.Categories" class="form-select">
+                        <option value="">-- Chọn danh mục --</option>
+                    </select>
+                    <span asp-validation-for="CategoryId" class="text-danger"></span>
+                </div>
+                <div class="col-sm-6 mb-3">
+                    <label asp-for="LocationId" class="form-label"></label>
+                    <select asp-for="LocationId" asp-items="Model.Locations" class="form-select">
+                        <option value="">-- Chọn khu vực --</option>
+                    </select>
+                    <span asp-validation-for="LocationId" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="LostAt" class="form-label"></label>
+                <input asp-for="LostAt" type="datetime-local" max="@nowMax" class="form-control" />
+                <span asp-validation-for="LostAt" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="TagsRaw" class="form-label"></label>
+                <partial name="_TagInput" model="@Model.TagsRaw" />
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="mb-3">
+                <label asp-for="CoverImage" class="form-label"></label>
+                <input asp-for="CoverImage" type="file" accept="image/*" class="form-control" />
+                <span asp-validation-for="CoverImage" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="OtherImages" class="form-label"></label>
+                <input asp-for="OtherImages" type="file" accept="image/*" multiple class="form-control" />
+                <div class="form-text">Có thể chọn nhiều ảnh (giữ Ctrl). Tối đa 7 ảnh gồm cả ảnh bìa.</div>
+                <span asp-validation-for="OtherImages" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Đăng</button>
+    <a asp-action="Index" class="btn btn-outline-secondary">Huỷ</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

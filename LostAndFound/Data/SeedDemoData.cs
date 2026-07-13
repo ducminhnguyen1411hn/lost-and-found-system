@@ -170,4 +170,79 @@ public static class SeedDemoData
         }
         await db.SaveChangesAsync();
     }
+
+    /// <summary>Demo dataset for the LOST-item board: ~24 public "I lost this" posts by the demo members.
+    /// Runs once, when there are no lost items yet. Reuses the same archetypes/tags.</summary>
+    public static async Task SeedLostItemsAsync(ApplicationDbContext db, UserManager<ApplicationUser> userManager, ITagService tagService)
+    {
+        if (await db.LostItem.AnyAsync()) return;
+
+        var owners = await db.Users.Where(u => u.Email != null && u.Email.StartsWith("user")).Select(u => u.Id).ToListAsync();
+        if (owners.Count == 0) return;
+
+        var cats = await db.Category.AsNoTracking().ToListAsync();
+        var leafCats = cats.Where(c => !cats.Any(x => x.ParentId == c.Id)).ToList();
+        var catIdByName = leafCats.ToDictionary(c => c.Name, c => c.Id);
+        var locationIds = await db.Location.AsNoTracking().Select(l => l.Id).ToListAsync();
+
+        await tagService.ResolveTagsAsync(Archetypes.SelectMany(a => a.Tags).Distinct());
+        await db.SaveChangesAsync();
+        var tagIdByNorm = await db.Tag.AsNoTracking().ToDictionaryAsync(t => t.NormalizedTag, t => t.Id);
+
+        var rng = new Random(777);
+        var now = DateTime.UtcNow;
+        const int count = 24;
+
+        var created = new List<(LostItem Item, string[] Tags, int Images)>();
+        for (int i = 0; i < count; i++)
+        {
+            var a = Archetypes[rng.Next(Archetypes.Length)];
+            var catId = catIdByName.TryGetValue(a.Cat, out var cid) ? cid : leafCats[rng.Next(leafCats.Count)].Id;
+            var lostAt = now.AddDays(-rng.Next(0, 45)).AddHours(-rng.Next(0, 24)).AddMinutes(-rng.Next(0, 60));
+
+            var item = new LostItem
+            {
+                Title = a.Title,
+                Description = $"Mình làm mất {a.Title.ToLowerInvariant()}. {a.Desc}",
+                CategoryId = catId,
+                LocationId = locationIds[rng.Next(locationIds.Count)],
+                LostAt = lostAt,
+                Status = (int)LostItemStatus.Open,
+                OwnerUserId = owners[rng.Next(owners.Count)],
+                CreatedAt = lostAt.AddMinutes(rng.Next(5, 180))
+            };
+            db.LostItem.Add(item);
+            created.Add((item, a.Tags, rng.Next(0, 3))); // 0-2 images (losers often have none)
+        }
+        await db.SaveChangesAsync();
+
+        foreach (var (item, tags, images) in created)
+        {
+            for (int j = 0; j < images; j++)
+                db.LostItemImage.Add(new LostItemImage
+                {
+                    LostItemId = item.Id,
+                    Url = $"https://picsum.photos/seed/laflost{item.Id}_{j}/640/420",
+                    SortOrder = j
+                });
+
+            var seen = new HashSet<int>();
+            foreach (var t in tags)
+                if (tagIdByNorm.TryGetValue(tagService.Normalize(t), out var tid) && seen.Add(tid))
+                    db.LostItemTag.Add(new LostItemTag { LostItemId = item.Id, TagId = tid });
+
+            db.AuditLog.Add(new AuditLog
+            {
+                ActorUserId = item.OwnerUserId,
+                Action = "Created",
+                EntityType = "LostItem",
+                EntityId = item.Id.ToString(),
+                ToStatus = LostItemStatus.Open.ToString(),
+                Detail = $"Đăng đồ bị mất: {item.Title}",
+                IsPublic = true,
+                CreatedAt = item.CreatedAt
+            });
+        }
+        await db.SaveChangesAsync();
+    }
 }

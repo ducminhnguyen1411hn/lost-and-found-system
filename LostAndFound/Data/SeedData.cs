@@ -144,7 +144,8 @@ public static class SeedData
             await db.SaveChangesAsync();
         }
 
-        // Demo dataset (~100 posts + users + images + tags + audit). Runs once, when there are no items.
-        await SeedDemoData.SeedAsync(db, userManager, sp.GetRequiredService<ITagService>());
+        // Demo datasets (run once, when their table is empty).
+        await SeedDemoData.SeedAsync(db, userManager, sp.GetRequiredService<ITagService>());          // ~100 found items
+        await SeedDemoData.SeedLostItemsAsync(db, userManager, sp.GetRequiredService<ITagService>()); // ~24 lost items
     }
 }

@@ -19,13 +19,19 @@
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="FoundItems" asp-action="Index">Đồ nhặt được</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="LostItems" asp-action="Index">Đồ bị mất</a>
+                        </li>
                         @if (User.Identity is not null && User.Identity.IsAuthenticated && !User.IsInRole("Admin"))
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="FoundItems" asp-action="Index">Đồ nhặt được</a>
+                                <a class="nav-link text-dark" asp-area="" asp-controller="FoundItems" asp-action="Create">Đăng đồ nhặt</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="FoundItems" asp-action="Create">Đăng đồ nhặt</a>
+                                <a class="nav-link text-dark" asp-area="" asp-controller="LostItems" asp-action="Create">Đăng đồ mất</a>
                             </li>
                         }
                         @if (User.IsInRole("Admin"))

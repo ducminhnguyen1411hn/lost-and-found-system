@@ -27,6 +27,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Tag> Tag => Set<Tag>();
     public DbSet<LostAlert> LostAlert => Set<LostAlert>();
     public DbSet<LostAlertTag> LostAlertTag => Set<LostAlertTag>();
+    public DbSet<LostItem> LostItem => Set<LostItem>();
+    public DbSet<LostItemImage> LostItemImage => Set<LostItemImage>();
+    public DbSet<LostItemTag> LostItemTag => Set<LostItemTag>();
     public DbSet<FoundItem> FoundItem => Set<FoundItem>();
     public DbSet<FoundItemImage> FoundItemImage => Set<FoundItemImage>();
     public DbSet<FoundItemTag> FoundItemTag => Set<FoundItemTag>();
@@ -195,6 +198,47 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasOne(d => d.LostAlert).WithMany(p => p.LostAlertTag).HasForeignKey(d => d.LostAlertId);
 
             entity.HasOne(d => d.Tag).WithMany(p => p.LostAlertTag)
+                .HasForeignKey(d => d.TagId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
+        });
+
+        modelBuilder.Entity<LostItem>(entity =>
+        {
+            entity.HasIndex(e => e.CategoryId, "IX_LostItem_CategoryId");
+            entity.HasIndex(e => e.LocationId, "IX_LostItem_LocationId");
+            entity.HasIndex(e => e.OwnerUserId, "IX_LostItem_OwnerUserId");
+            entity.HasIndex(e => e.Status, "IX_LostItem_Status");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.Description).HasMaxLength(2000);
+            entity.Property(e => e.Title).HasMaxLength(200);
+
+            entity.HasOne(d => d.Category).WithMany(p => p.LostItem)
+                .HasForeignKey(d => d.CategoryId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
+
+            entity.HasOne(d => d.Location).WithMany(p => p.LostItem)
+                .HasForeignKey(d => d.LocationId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
+        });
+
+        modelBuilder.Entity<LostItemImage>(entity =>
+        {
+            entity.HasIndex(e => e.LostItemId, "IX_LostItemImage_LostItemId");
+
+            entity.Property(e => e.Url).HasMaxLength(400);
+
+            entity.HasOne(d => d.LostItem).WithMany(p => p.LostItemImage).HasForeignKey(d => d.LostItemId);
+        });
+
+        modelBuilder.Entity<LostItemTag>(entity =>
+        {
+            entity.HasIndex(e => e.TagId, "IX_LostItemTag_TagId");
+            entity.HasIndex(e => new { e.LostItemId, e.TagId }, "UX_LostItemTag_Item_Tag").IsUnique();
+
+            entity.HasOne(d => d.LostItem).WithMany(p => p.LostItemTag).HasForeignKey(d => d.LostItemId);
+
+            entity.HasOne(d => d.Tag).WithMany(p => p.LostItemTag)
                 .HasForeignKey(d => d.TagId)
                 .OnDelete(DeleteBehavior.ClientSetNull);
         });
