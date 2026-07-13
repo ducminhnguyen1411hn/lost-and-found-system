@@ -76,7 +76,7 @@ public class FoundItemsController : Controller
         }
         catch (ImageUploadException ex)
         {
-            ModelState.AddModelError(nameof(FoundItemCreateViewModel.ImageFile), ex.Message);
+            ModelState.AddModelError(nameof(FoundItemCreateViewModel.CoverImage), ex.Message);
             return await RedisplayCreate(vm);
         }
     }
@@ -121,7 +121,7 @@ public class FoundItemsController : Controller
         }
         catch (ImageUploadException ex)
         {
-            ModelState.AddModelError(nameof(FoundItemEditViewModel.ImageFile), ex.Message);
+            ModelState.AddModelError(nameof(FoundItemEditViewModel.NewImages), ex.Message);
             return await RedisplayEdit(vm);
         }
     }
@@ -143,6 +143,11 @@ public class FoundItemsController : Controller
     {
         vm.Categories = await BuildCategorySelectAsync(vm.CategoryId);
         vm.Locations = await BuildLocationSelectAsync(vm.LocationId);
+        vm.ExistingImages = await _db.FoundItemImage.AsNoTracking()
+            .Where(im => im.FoundItemId == vm.Id)
+            .OrderBy(im => im.SortOrder)
+            .Select(im => new FoundItemEditViewModel.ImageItem { Id = im.Id, Url = im.Url })
+            .ToListAsync();
         return View(vm);
     }
 

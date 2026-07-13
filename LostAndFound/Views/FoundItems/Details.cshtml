@@ -36,14 +36,39 @@
 
 <div class="row">
     <div class="col-md-5 mb-3">
-        @if (!string.IsNullOrEmpty(Model.ImagePath))
-        {
-            <img src="@Model.ImagePath" class="img-fluid rounded shadow-sm" alt="@Model.Title" />
-        }
-        else
+        @if (Model.ImagePaths.Count == 0)
         {
             <div class="bg-light d-flex align-items-center justify-content-center text-muted rounded" style="height:260px;">
                 <span>Không có ảnh</span>
+            </div>
+        }
+        else if (Model.ImagePaths.Count == 1)
+        {
+            <img src="@Model.ImagePaths[0]" class="img-fluid rounded shadow-sm" alt="@Model.Title" />
+        }
+        else
+        {
+            <div id="itemImages" class="carousel slide">
+                <div class="carousel-inner rounded shadow-sm bg-light">
+                    @for (int i = 0; i < Model.ImagePaths.Count; i++)
+                    {
+                        <div class="carousel-item @(i == 0 ? "active" : "")">
+                            <img src="@Model.ImagePaths[i]" class="d-block w-100" style="height:340px;object-fit:contain;" alt="@Model.Title" />
+                        </div>
+                    }
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#itemImages" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon bg-dark rounded"></span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#itemImages" data-bs-slide="next">
+                    <span class="carousel-control-next-icon bg-dark rounded"></span>
+                </button>
+                <div class="carousel-indicators">
+                    @for (int i = 0; i < Model.ImagePaths.Count; i++)
+                    {
+                        <button type="button" data-bs-target="#itemImages" data-bs-slide-to="@i" class="@(i == 0 ? "active" : "")" aria-label="Ảnh @(i + 1)"></button>
+                    }
+                </div>
             </div>
         }
     </div>

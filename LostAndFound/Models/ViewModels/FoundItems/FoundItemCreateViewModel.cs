@@ -42,8 +42,11 @@ public class FoundItemCreateViewModel
     [Display(Name = "Thẻ (phân tách bằng dấu phẩy)")]
     public string? TagsRaw { get; set; }
 
-    [Display(Name = "Ảnh (JPG/PNG/WEBP, ≤ 5MB)")]
-    public IFormFile? ImageFile { get; set; }
+    [Display(Name = "Ảnh bìa (hiển thị ở danh sách)")]
+    public IFormFile? CoverImage { get; set; }
+
+    [Display(Name = "Ảnh khác (có thể chọn nhiều)")]
+    public List<IFormFile>? OtherImages { get; set; }
 
     // Populated by the controller for the dropdowns.
     public IEnumerable<SelectListItem> Categories { get; set; } = new List<SelectListItem>();

@@ -9,7 +9,8 @@ public class FoundItemListItemViewModel
     public string CategoryName { get; init; } = string.Empty;
     public string LocationName { get; init; } = string.Empty;
     public DateTime FoundAt { get; init; }
-    public string? ImagePath { get; init; }
+    public string? CoverImagePath { get; init; } // the cover (lowest SortOrder), or null
+    public int ImageCount { get; init; }          // total images (drives the "+N" badge)
     public IReadOnlyList<string> DisplayTags { get; init; } = Array.Empty<string>();
     public DateTime CreatedAt { get; init; }
 }

@@ -12,7 +12,7 @@ public class FoundItemDetailViewModel
     public string CategoryName { get; init; } = string.Empty;
     public string LocationName { get; init; } = string.Empty;
     public DateTime FoundAt { get; init; }
-    public string? ImagePath { get; init; }
+    public IReadOnlyList<string> ImagePaths { get; init; } = Array.Empty<string>(); // cover first, then others
     public string ReporterName { get; init; } = string.Empty;
     public HoldingType HoldingType { get; init; }
     public FoundItemStatus Status { get; init; }

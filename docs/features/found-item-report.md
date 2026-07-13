@@ -34,3 +34,10 @@
 - **AuditLog:** `"Updated"` / `"Deleted"` with `IsPublic=false` (internal — don't surface edit noise or leak what changed).
 - **Verified at runtime:** owner edit changes title+tags; non-owner (admin) Edit → 404; delete removes item (Details 404, gone from list).
 - **Gotcha:** run-lock — if the app is already running, `dotnet build` fails only on the *exe copy* (`MSB3027`); build to a temp `-o` dir to verify compilation without stopping the running instance.
+
+## D. Follow-up: multiple images per post (schema change)
+- **DB-First flow (the real one):** edited `db/schema.sql` (added child table `FoundItemImage(Id, FoundItemId, Url, SortOrder)`, migrated the legacy `FoundItem.ImagePath` into it as the cover, dropped the column) → recreated the DB (idempotent `IF NOT EXISTS` + `COL_LENGTH` guards → **no data loss**) → `/db-rescaffold` with `--table FoundItemImage` → copied the new `DbSet`/config into `ApplicationDbContext` → deleted the throwaway `ScaffoldDbContext`.
+- **Model:** cover image = the row with the lowest `SortOrder` (0). Create form has **two inputs** — cover (single) + other images (multiple). List returns `CoverImagePath` + `ImageCount` (drives a "📷 N" badge); detail returns the ordered `ImagePaths` array (Bootstrap carousel). Edit = tick-to-remove existing + add-more; on save, kept images are **renumbered** so the cover stays SortOrder 0.
+- **Upload:** loop the existing single-file `IImageUploadService.UploadAsync` (cover first, then others) — no interface change. Still uploaded **before** the transaction.
+- **Verified at runtime:** create with 1 cover + 2 others → rows at SortOrder 0/1/2, list badge "📷 3", detail carousel of 3; edit-remove the cover → 2 rows renumbered to 0/1 (next image becomes cover), badge "📷 2".
+- **Trap:** the re-scaffold + column drop broke every `ImagePath` reference (VMs, service, views, controller `nameof(...ImageFile)`); the compiler lists them all — chase each. Re-running `--force` scaffold regenerated all entities but only `FoundItem` (lost `ImagePath`) + new `FoundItemImage` actually differed.

@@ -64,17 +64,31 @@
 
             <div class="mb-3">
                 <label class="form-label d-block">Ảnh hiện tại</label>
-                @if (!string.IsNullOrEmpty(Model.CurrentImagePath))
-                {
-                    <img src="@Model.CurrentImagePath" class="img-fluid rounded mb-2" style="max-height:160px;" alt="ảnh hiện tại" />
-                }
-                else
+                @if (Model.ExistingImages.Count == 0)
                 {
                     <div class="text-muted small mb-2">Chưa có ảnh</div>
                 }
-                <label asp-for="ImageFile" class="form-label"></label>
-                <input asp-for="ImageFile" type="file" accept="image/*" class="form-control" />
-                <span asp-validation-for="ImageFile" class="text-danger"></span>
+                else
+                {
+                    <div class="row row-cols-3 g-2 mb-1">
+                        @foreach (var img in Model.ExistingImages)
+                        {
+                            <div class="col text-center">
+                                <img src="@img.Url" class="img-fluid rounded" style="height:70px;object-fit:cover;" alt="ảnh" />
+                                <div class="form-check d-flex justify-content-center gap-1">
+                                    <input class="form-check-input" type="checkbox" name="RemoveImageIds" value="@img.Id" id="rm_@img.Id" />
+                                    <label class="form-check-label small text-danger" for="rm_@img.Id">Xoá</label>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="form-text">Tick để xoá. Ảnh bìa = ảnh đầu tiên còn lại.</div>
+                }
+            </div>
+            <div class="mb-3">
+                <label asp-for="NewImages" class="form-label"></label>
+                <input asp-for="NewImages" type="file" accept="image/*" multiple class="form-control" />
+                <span asp-validation-for="NewImages" class="text-danger"></span>
             </div>
 
             <div class="mb-3">

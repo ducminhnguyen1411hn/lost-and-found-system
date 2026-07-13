@@ -23,8 +23,6 @@ public partial class FoundItem
 
     public string? StorageLocation { get; set; }
 
-    public string? ImagePath { get; set; }
-
     public string? PrivateMarks { get; set; }
 
     public string ReporterUserId { get; set; } = null!;
@@ -40,6 +38,8 @@ public partial class FoundItem
     public virtual Category Category { get; set; } = null!;
 
     public virtual ICollection<Claim> Claim { get; set; } = new List<Claim>();
+
+    public virtual ICollection<FoundItemImage> FoundItemImage { get; set; } = new List<FoundItemImage>();
 
     public virtual ICollection<FoundItemTag> FoundItemTag { get; set; } = new List<FoundItemTag>();
 

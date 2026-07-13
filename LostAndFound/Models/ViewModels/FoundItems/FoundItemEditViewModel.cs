@@ -42,11 +42,22 @@ public class FoundItemEditViewModel
     [Display(Name = "Thẻ (phân tách bằng dấu phẩy)")]
     public string? TagsRaw { get; set; }
 
-    [Display(Name = "Ảnh mới (để trống nếu giữ ảnh cũ)")]
-    public IFormFile? ImageFile { get; set; }
+    [Display(Name = "Thêm ảnh mới (có thể chọn nhiều)")]
+    public List<IFormFile>? NewImages { get; set; }
 
-    public string? CurrentImagePath { get; set; }
+    /// <summary>Ids of existing images the user ticked to remove.</summary>
+    public List<int> RemoveImageIds { get; set; } = new();
+
+    /// <summary>Existing images shown for management (cover first).</summary>
+    public IReadOnlyList<ImageItem> ExistingImages { get; set; } = Array.Empty<ImageItem>();
+
     public HoldingType HoldingType { get; set; } // read-only display
+
+    public class ImageItem
+    {
+        public int Id { get; init; }
+        public string Url { get; init; } = string.Empty;
+    }
 
     public IEnumerable<SelectListItem> Categories { get; set; } = new List<SelectListItem>();
     public IEnumerable<SelectListItem> Locations { get; set; } = new List<SelectListItem>();

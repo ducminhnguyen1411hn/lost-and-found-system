@@ -33,7 +33,8 @@ public class FoundItemService : IFoundItemService
     public async Task<int> CreateAsync(FoundItemCreateViewModel vm, string reporterUserId)
     {
         // Upload BEFORE opening the DB transaction (network I/O must not hold a tx open).
-        var imageUrl = await _images.UploadAsync(vm.ImageFile, ImageFolder);
+        // Cover first (SortOrder 0), then the "other" images.
+        var imageUrls = await UploadOrderedAsync(vm.CoverImage, vm.OtherImages);
 
         // SelfHeld goes public immediately; Custodial waits for staff intake (FR-HOLD-02).
         var status = vm.HoldingType == HoldingType.Custodial ? FoundItemStatus.PendingDropoff : FoundItemStatus.Open;
@@ -50,12 +51,15 @@ public class FoundItemService : IFoundItemService
             Status = (int)status,
             HoldingType = (int)vm.HoldingType,
             PrivateMarks = string.IsNullOrWhiteSpace(vm.PrivateMarks) ? null : vm.PrivateMarks.Trim(),
-            ImagePath = imageUrl,
             ReporterUserId = reporterUserId
             // CreatedAt is store-generated.
         };
         _db.FoundItem.Add(item);
         await _db.SaveChangesAsync(); // get item.Id
+
+        for (int i = 0; i < imageUrls.Count; i++)
+            _db.FoundItemImage.Add(new FoundItemImage { FoundItemId = item.Id, Url = imageUrls[i], SortOrder = i });
+        if (imageUrls.Count > 0) await _db.SaveChangesAsync();
 
         var tags = await _tags.ResolveTagsAsync(vm.TagList);
         foreach (var tag in tags)
@@ -114,7 +118,8 @@ public class FoundItemService : IFoundItemService
                 CategoryName = f.Category.Name,
                 LocationName = f.Location.Name,
                 FoundAt = f.FoundAt,
-                ImagePath = f.ImagePath,
+                CoverImagePath = f.FoundItemImage.OrderBy(im => im.SortOrder).Select(im => im.Url).FirstOrDefault(),
+                ImageCount = f.FoundItemImage.Count,
                 CreatedAt = f.CreatedAt,
                 DisplayTags = f.FoundItemTag.Select(ft => ft.Tag.DisplayTag).ToList()
                 // NO PrivateMarks selected — blind listing.
@@ -137,6 +142,7 @@ public class FoundItemService : IFoundItemService
             .Include(f => f.Category)
             .Include(f => f.Location)
             .Include(f => f.FoundItemTag).ThenInclude(ft => ft.Tag)
+            .Include(f => f.FoundItemImage)
             .FirstOrDefaultAsync(f => f.Id == id);
 
         if (item is null) return null;
@@ -182,7 +188,7 @@ public class FoundItemService : IFoundItemService
             CategoryName = item.Category.Name,
             LocationName = item.Location.Name,
             FoundAt = item.FoundAt,
-            ImagePath = item.ImagePath,
+            ImagePaths = item.FoundItemImage.OrderBy(im => im.SortOrder).Select(im => im.Url).ToList(),
             ReporterName = reporterName,
             HoldingType = (HoldingType)item.HoldingType,
             Status = status,
@@ -200,6 +206,7 @@ public class FoundItemService : IFoundItemService
     {
         var item = await _db.FoundItem.AsNoTracking()
             .Include(f => f.FoundItemTag).ThenInclude(ft => ft.Tag)
+            .Include(f => f.FoundItemImage)
             .FirstOrDefaultAsync(f => f.Id == id);
 
         if (item is null || item.ReporterUserId != userId) return null; // owner-only
@@ -215,7 +222,10 @@ public class FoundItemService : IFoundItemService
             FoundAt = item.FoundAt,
             PrivateMarks = item.PrivateMarks,
             TagsRaw = string.Join(", ", item.FoundItemTag.Select(ft => ft.Tag.DisplayTag)),
-            CurrentImagePath = item.ImagePath,
+            ExistingImages = item.FoundItemImage
+                .OrderBy(im => im.SortOrder)
+                .Select(im => new FoundItemEditViewModel.ImageItem { Id = im.Id, Url = im.Url })
+                .ToList(),
             HoldingType = (HoldingType)item.HoldingType
         };
     }
@@ -223,12 +233,21 @@ public class FoundItemService : IFoundItemService
     /// <inheritdoc />
     public async Task<bool> UpdateAsync(int id, FoundItemEditViewModel vm, string userId)
     {
-        var item = await _db.FoundItem.Include(f => f.FoundItemTag).FirstOrDefaultAsync(f => f.Id == id);
+        var item = await _db.FoundItem
+            .Include(f => f.FoundItemTag)
+            .Include(f => f.FoundItemImage)
+            .FirstOrDefaultAsync(f => f.Id == id);
         if (item is null || item.ReporterUserId != userId) return false; // owner-only
         if (!await IsEditableAsync(item)) return false;
 
-        // Upload the replacement image (if any) before the transaction.
-        var newImageUrl = await _images.UploadAsync(vm.ImageFile, ImageFolder);
+        // Upload any newly added images before the transaction.
+        var newUrls = new List<string>();
+        if (vm.NewImages is not null)
+            foreach (var f in vm.NewImages)
+            {
+                var u = await _images.UploadAsync(f, ImageFolder);
+                if (u is not null) newUrls.Add(u);
+            }
 
         await using var tx = await _db.Database.BeginTransactionAsync();
 
@@ -238,7 +257,16 @@ public class FoundItemService : IFoundItemService
         item.LocationId = vm.LocationId!.Value;
         item.FoundAt = vm.FoundAt!.Value;
         item.PrivateMarks = string.IsNullOrWhiteSpace(vm.PrivateMarks) ? null : vm.PrivateMarks.Trim();
-        if (newImageUrl is not null) item.ImagePath = newImageUrl; // keep old image when no new upload
+
+        // Images: drop the ticked ones, keep the rest, append the new ones, renumber SortOrder (cover = 0).
+        var removeIds = vm.RemoveImageIds ?? new List<int>();
+        var toRemove = item.FoundItemImage.Where(im => removeIds.Contains(im.Id)).ToList();
+        if (toRemove.Count > 0) _db.FoundItemImage.RemoveRange(toRemove);
+        var kept = item.FoundItemImage.Where(im => !removeIds.Contains(im.Id)).OrderBy(im => im.SortOrder).ToList();
+        var order = 0;
+        foreach (var im in kept) im.SortOrder = order++;
+        foreach (var url in newUrls)
+            _db.FoundItemImage.Add(new FoundItemImage { FoundItemId = item.Id, Url = url, SortOrder = order++ });
 
         // Replace the tag set: delete old joins first (avoid a unique-key clash), then add the resolved tags.
         _db.FoundItemTag.RemoveRange(item.FoundItemTag);
@@ -272,6 +300,21 @@ public class FoundItemService : IFoundItemService
 
         await tx.CommitAsync();
         return true;
+    }
+
+    /// <summary>Uploads the cover (first) then the other images, returning URLs in cover-first order.</summary>
+    private async Task<List<string>> UploadOrderedAsync(IFormFile? cover, List<IFormFile>? others)
+    {
+        var urls = new List<string>();
+        var coverUrl = await _images.UploadAsync(cover, ImageFolder);
+        if (coverUrl is not null) urls.Add(coverUrl);
+        if (others is not null)
+            foreach (var f in others)
+            {
+                var u = await _images.UploadAsync(f, ImageFolder);
+                if (u is not null) urls.Add(u);
+            }
+        return urls;
     }
 
     /// <summary>Editable only while Open/PendingDropoff AND no claim exists yet.</summary>
