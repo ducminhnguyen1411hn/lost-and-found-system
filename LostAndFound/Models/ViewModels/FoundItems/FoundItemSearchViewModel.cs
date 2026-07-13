@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using LostAndFound.Models.ViewModels.Common;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -11,6 +12,14 @@ public class FoundItemSearchViewModel
     public int? CategoryId { get; set; }
     public int? LocationId { get; set; }
     public string? Tag { get; set; }
+
+    [DataType(DataType.Date)]
+    [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
+    public DateTime? FoundFrom { get; set; }
+
+    [DataType(DataType.Date)]
+    [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
+    public DateTime? FoundTo { get; set; }
 
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 12;

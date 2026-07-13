@@ -105,6 +105,8 @@ public class FoundItemService : IFoundItemService
         }
         if (q.CategoryId is int cat) query = query.Where(f => f.CategoryId == cat);
         if (q.LocationId is int loc) query = query.Where(f => f.LocationId == loc);
+        if (q.FoundFrom is DateTime from) query = query.Where(f => f.FoundAt >= from.Date);
+        if (q.FoundTo is DateTime to) query = query.Where(f => f.FoundAt < to.Date.AddDays(1)); // inclusive of the whole "to" day
         if (!string.IsNullOrWhiteSpace(q.Tag))
         {
             var norm = _tags.Normalize(q.Tag);

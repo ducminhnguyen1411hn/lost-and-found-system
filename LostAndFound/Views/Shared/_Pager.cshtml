@@ -12,6 +12,7 @@
                    asp-controller="FoundItems" asp-action="Index"
                    asp-route-Keyword="@Model.Keyword" asp-route-CategoryId="@Model.CategoryId"
                    asp-route-LocationId="@Model.LocationId" asp-route-Tag="@Model.Tag"
+                   asp-route-FoundFrom="@(Model.FoundFrom?.ToString("yyyy-MM-dd"))" asp-route-FoundTo="@(Model.FoundTo?.ToString("yyyy-MM-dd"))"
                    asp-route-PageSize="@Model.PageSize" asp-route-Page="@(r.Page - 1)">«</a>
             </li>
             @for (int p = 1; p <= r.TotalPages; p++)
@@ -29,6 +30,7 @@
                    asp-controller="FoundItems" asp-action="Index"
                    asp-route-Keyword="@Model.Keyword" asp-route-CategoryId="@Model.CategoryId"
                    asp-route-LocationId="@Model.LocationId" asp-route-Tag="@Model.Tag"
+                   asp-route-FoundFrom="@(Model.FoundFrom?.ToString("yyyy-MM-dd"))" asp-route-FoundTo="@(Model.FoundTo?.ToString("yyyy-MM-dd"))"
                    asp-route-PageSize="@Model.PageSize" asp-route-Page="@(r.Page + 1)">»</a>
             </li>
         </ul>

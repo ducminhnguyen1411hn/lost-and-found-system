@@ -16,21 +16,29 @@
         <label class="form-label">Từ khoá</label>
         <input asp-for="Keyword" class="form-control" placeholder="Tiêu đề / mô tả..." />
     </div>
-    <div class="col-md-3">
+    <div class="col-md-4">
         <label class="form-label">Danh mục</label>
         <select asp-for="CategoryId" asp-items="Model.Categories" class="form-select">
             <option value="">-- Tất cả --</option>
         </select>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-4">
         <label class="form-label">Nơi nhặt</label>
         <select asp-for="LocationId" asp-items="Model.Locations" class="form-select">
             <option value="">-- Tất cả --</option>
         </select>
     </div>
-    <div class="col-md-2">
+    <div class="col-md-4">
         <label class="form-label">Thẻ</label>
         <input asp-for="Tag" class="form-control" placeholder="thẻ..." />
+    </div>
+    <div class="col-md-4">
+        <label asp-for="FoundFrom" class="form-label">Nhặt từ ngày</label>
+        <input asp-for="FoundFrom" type="date" class="form-control" />
+    </div>
+    <div class="col-md-4">
+        <label asp-for="FoundTo" class="form-label">Đến ngày</label>
+        <input asp-for="FoundTo" type="date" class="form-control" />
     </div>
     <div class="col-12">
         <button type="submit" class="btn btn-outline-primary">Tìm kiếm</button>
