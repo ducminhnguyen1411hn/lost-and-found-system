@@ -1,7 +1,13 @@
+using CloudinaryDotNet;
 using LostAndFound.Data;
 using LostAndFound.Models;
+using LostAndFound.Models.Settings;
+using LostAndFound.Services;
+using LostAndFound.Services.Images;
+using LostAndFound.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace LostAndFound
 {
@@ -40,6 +46,22 @@ namespace LostAndFound
             builder.Services.AddControllersWithViews();
             builder.Services.AddRazorPages();
             builder.Services.AddSignalR();
+
+            // ---- Cloudinary (found-item images, FR-FOUND-05) ----
+            builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("Cloudinary"));
+            builder.Services.AddSingleton(sp =>
+            {
+                var s = sp.GetRequiredService<IOptions<CloudinarySettings>>().Value;
+                var cloudinary = new Cloudinary(new Account(s.CloudName, s.ApiKey, s.ApiSecret));
+                cloudinary.Api.Secure = true;
+                return cloudinary;
+            });
+
+            // ---- Domain services (first vertical slice wires the shared contracts) ----
+            builder.Services.AddScoped<ITagService, TagService>();
+            builder.Services.AddScoped<IAuditService, AuditService>();
+            builder.Services.AddScoped<IImageUploadService, CloudinaryImageUploadService>();
+            builder.Services.AddScoped<IFoundItemService, FoundItemService>();
 
             var app = builder.Build();
 

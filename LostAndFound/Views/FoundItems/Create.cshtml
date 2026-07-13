@@ -1,0 +1,90 @@
+@model FoundItemCreateViewModel
+@{
+    ViewData["Title"] = "Đăng đồ nhặt được";
+}
+
+<h1 class="h3 mb-3">Đăng đồ nhặt được</h1>
+
+<form asp-action="Create" method="post" enctype="multipart/form-data">
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="mb-3">
+                <label asp-for="Title" class="form-label"></label>
+                <input asp-for="Title" class="form-control" />
+                <span asp-validation-for="Title" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label"></label>
+                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                <div class="form-text">Mô tả công khai. <strong>Đừng</strong> viết ra đặc điểm bí mật ở đây — hãy giữ lại ít nhất một chi tiết để xác minh người nhận.</div>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+
+            <div class="row">
+                <div class="col-sm-6 mb-3">
+                    <label asp-for="CategoryId" class="form-label"></label>
+                    <select asp-for="CategoryId" asp-items="Model.Categories" class="form-select">
+                        <option value="">-- Chọn danh mục --</option>
+                    </select>
+                    <span asp-validation-for="CategoryId" class="text-danger"></span>
+                </div>
+                <div class="col-sm-6 mb-3">
+                    <label asp-for="LocationId" class="form-label"></label>
+                    <select asp-for="LocationId" asp-items="Model.Locations" class="form-select">
+                        <option value="">-- Chọn nơi nhặt --</option>
+                    </select>
+                    <span asp-validation-for="LocationId" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="FoundAt" class="form-label"></label>
+                <input asp-for="FoundAt" type="datetime-local" class="form-control" />
+                <span asp-validation-for="FoundAt" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="TagsRaw" class="form-label"></label>
+                <partial name="_TagInput" model="@Model.TagsRaw" />
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="mb-3">
+                <label class="form-label d-block">@Html.DisplayNameFor(m => m.HoldingType)</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" asp-for="HoldingType" value="@((int)HoldingType.SelfHeld)" id="htSelf" checked />
+                    <label class="form-check-label" for="htSelf">Tôi tự giữ (đăng công khai ngay)</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" asp-for="HoldingType" value="@((int)HoldingType.Custodial)" id="htCustodial" />
+                    <label class="form-check-label" for="htCustodial">Ký gửi cho Staff</label>
+                </div>
+                <div class="form-text">Ký gửi: bài đăng chờ Staff xác nhận nhận đồ rồi mới hiển thị công khai.</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ImageFile" class="form-label"></label>
+                <input asp-for="ImageFile" type="file" accept="image/*" class="form-control" />
+                <span asp-validation-for="ImageFile" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="PrivateMarks" class="form-label"></label>
+                <textarea asp-for="PrivateMarks" class="form-control" rows="3"></textarea>
+                <div class="form-text">Đáp án bí mật để đối chiếu khi có người tới nhận. Không hiển thị công khai; người tới nhận không thấy được. (Ký gửi: có thể để Staff bổ sung khi nhận đồ.)</div>
+                <span asp-validation-for="PrivateMarks" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Đăng</button>
+    <a asp-action="Index" class="btn btn-outline-secondary">Huỷ</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

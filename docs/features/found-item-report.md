@@ -1,0 +1,28 @@
+# Feature: Report & public lookup of found items  (FR-FOUND, +FR-TAG, +FR-LOG)
+
+- **Dimension:** D-CRUD+ (create form + public list/detail/search) — the first real vertical slice; it also lays down the shared **Service + AuditLog-in-one-transaction + DI** pattern every later feature copies.
+- **By:** Dev A   **Status:** Done (image-upload path wired to Cloudinary; see trap #4 about running the app locally)
+- **Touches:** `FoundItem`, `Tag`, `FoundItemTag`, `Category`, `Location`, `AuditLog` · `TagService`, `AuditService`, `CloudinaryImageUploadService`, `FoundItemService` · `FoundItemsController` · Views `Index/Details/Create` + partials `_ItemCard/_Pager/_TagInput` · `SeedData` · `Program.cs` DI.
+
+## A. Lessons & application
+- **Business goal:** a finder posts what they found; anyone can browse/search a public list and open a detail page. The backbone every other module builds on (matching/holding/claim all need a `FoundItem`).
+- **Decisions worth remembering:**
+  - `HoldingType` chosen in the form: **SelfHeld → Open** (public immediately), **Custodial → PendingDropoff** (created but hidden until FR-HOLD staff intake). No staff screen built here.
+  - **Verification model = two fields, two sides:** `PrivateMarks` (holder's hidden answer, on FoundItem) vs `VerificationDetails` (claimant's proof, on Claim, later). PrivateMarks is owned by whoever holds the item — reporter (SelfHeld) at posting, staff (Custodial) at intake.
+  - Images → **Cloudinary** (`CloudinaryDotNet`), URL stored in `ImagePath`. Upload happens **before** the DB transaction so network I/O doesn't hold a tx open.
+- **Traps hit (most valuable):**
+  1. **EF store-default sentinel:** the scaffold had `entity.Property(e => e.Status).HasDefaultValue(1)`. EF then treats the CLR default `0` (== `PendingDropoff`, a real Custodial status) as "unset" and omits it on INSERT, so Custodial items silently persisted as `Open`. **Fix:** remove `HasDefaultValue(1)` from `ApplicationDbContext` (the service always sets `Status` explicitly; the DB column default 1 still guards raw inserts). Keep it removed after any re-scaffold.
+  2. **Blind-listing must be "by construction," not CSS:** the list VM (`FoundItemListItemViewModel`) has **no** PrivateMarks property and the search projection never selects it; the detail VM fills `PrivateMarks`/`StorageLocation` **only** after the server-side `CanSeePrivate` check. Never `display:none` / hidden input — that leaks via View Source.
+  3. **Vietnamese tag normalization can't be tested through Git Bash:** the Windows shell mangles UTF-8 (`í`→byte 0xED) before curl sends it, so tag search "looked broken" (0 matches) when the code was fine. **Verify by pre-percent-encoding UTF-8 yourself** (`Th%E1%BA%BB...`, pure ASCII the shell won't corrupt), or with a unit test. Confirmed: `"Thẻ Sinh Viên"` → stored normalized `"the sinh vien"`, searchable by the accent-free form.
+  4. **Pre-existing blocker:** `Program.cs` `AddGoogle(...)` throws `Google ClientId not found` on *every* request when the `Authentication:Google:*` user-secrets are absent (they are, on this machine — only Cloudinary secrets exist) → 500 across the whole app. Not an FR-FOUND bug; documented for follow-up (make Google registration conditional, or add the secrets).
+- **Reusable where:** LostAlert create (FR-MATCH), Claim submit (FR-CLAIM), any Admin CRUD — same VM/Service/thin-controller/partial shape.
+
+## B. Reusable recipe
+- **Steps (in order):** 1) config/DI (settings + services) → 2) shared services (`TagService`, `AuditService`) → 3) domain service (`FoundItemService`) with the transaction → 4) thin controller → 5) partials → 6) views + nav + `_ViewImports` → 7) seed lookups → 8) build + run + drive the flow.
+- **Files:** no schema change (DB-First). ViewModels under `Models/ViewModels/FoundItems/` + `Common/PagedResult<T>` + `Models/Validation/NotInFutureAttribute`. Service pair in `Services/` + `Services/Interfaces/`. Controller thin. Views + `Views/Shared/_ItemCard|_Pager|_TagInput`.
+- **Validation:** code = DataAnnotations (`[Required]`, `[StringLength]`, `[NotInFuture]` on FoundAt) + image type/size in the upload service; DB = FK + `CK_FoundItem_Status`/`HoldingType` + `UX_Tag_NormalizedTag`.
+- **Authorization:** list/detail `[AllowAnonymous]`; create `[Authorize(Roles="Member,Staff,Admin")]` + `[ValidateAntiForgeryToken]`. Registration grants `Member`. Non-Open items are visible only to reporter/custodian/staff/admin (service returns null → 404 otherwise).
+- **AuditLog:** one `"Created"` row per create, in the same transaction; `IsPublic = (status == Open)` (Open=public timeline, PendingDropoff=private).
+- **Notification:** none in this slice (no other user involved yet) — arrives with FR-MATCH/FR-CLAIM.
+- **Minimum tests (verified):** SelfHeld→Open shows on list; Custodial→PendingDropoff hidden from list + anon detail 404; reporter sees PrivateMarks, anon does not; FoundAt in future rejected; tag search matches on normalized form; AuditLog written with correct `IsPublic`.
+- **Easy to get wrong when copying:** the EF store-default sentinel (trap #1) and rendering a hidden field for non-holders (trap #2). Always upload images outside the DB transaction.

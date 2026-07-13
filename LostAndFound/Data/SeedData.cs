@@ -1,5 +1,7 @@
 using LostAndFound.Models;
+using LostAndFound.Models.Entities;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LostAndFound.Data;
@@ -91,6 +93,45 @@ public static class SeedData
             {
                 await userManager.AddToRoleAsync(member, "Member");
             }
+        }
+
+        // ==========================================
+        // Sample master data (FR-AUTH-04): 2-level Category + Location.
+        // Needed by the FR-FOUND report form dropdowns. Idempotent.
+        // ==========================================
+        var db = sp.GetRequiredService<ApplicationDbContext>();
+
+        if (!await db.Category.AnyAsync())
+        {
+            var electronics = new Category { Name = "Điện tử" };
+            var papers = new Category { Name = "Giấy tờ" };
+            var personal = new Category { Name = "Đồ dùng cá nhân" };
+            var other = new Category { Name = "Khác" };
+            db.Category.AddRange(electronics, papers, personal, other);
+            await db.SaveChangesAsync(); // assign parent Ids
+
+            db.Category.AddRange(
+                new Category { Name = "Điện thoại", ParentId = electronics.Id },
+                new Category { Name = "Laptop", ParentId = electronics.Id },
+                new Category { Name = "Tai nghe", ParentId = electronics.Id },
+                new Category { Name = "Thẻ sinh viên", ParentId = papers.Id },
+                new Category { Name = "CCCD", ParentId = papers.Id },
+                new Category { Name = "Ví", ParentId = papers.Id },
+                new Category { Name = "Bình nước", ParentId = personal.Id },
+                new Category { Name = "Ô (dù)", ParentId = personal.Id },
+                new Category { Name = "Chìa khoá", ParentId = personal.Id });
+            await db.SaveChangesAsync();
+        }
+
+        if (!await db.Location.AnyAsync())
+        {
+            db.Location.AddRange(
+                new Location { Name = "Thư viện" },
+                new Location { Name = "Căng tin" },
+                new Location { Name = "Sảnh A" },
+                new Location { Name = "Sân trường" },
+                new Location { Name = "Phòng bảo vệ" });
+            await db.SaveChangesAsync();
         }
     }
 }
