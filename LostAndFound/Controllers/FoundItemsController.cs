@@ -88,6 +88,64 @@ public class FoundItemsController : Controller
         return View(vm);
     }
 
+    // GET /FoundItems/Edit/5 — owner-only (service enforces)
+    [Authorize]
+    [HttpGet]
+    public async Task<IActionResult> Edit(int id)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var vm = await _service.GetForEditAsync(id, userId);
+        if (vm is null) return NotFound();
+        vm.Categories = await BuildCategorySelectAsync(vm.CategoryId);
+        vm.Locations = await BuildLocationSelectAsync(vm.LocationId);
+        return View(vm);
+    }
+
+    // POST /FoundItems/Edit/5
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(int id, FoundItemEditViewModel vm)
+    {
+        vm.Id = id;
+        if (!ModelState.IsValid)
+            return await RedisplayEdit(vm);
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        try
+        {
+            var ok = await _service.UpdateAsync(id, vm, userId);
+            if (!ok) return NotFound();
+            TempData["SuccessMessage"] = "Đã cập nhật bài đăng.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+        catch (ImageUploadException ex)
+        {
+            ModelState.AddModelError(nameof(FoundItemEditViewModel.ImageFile), ex.Message);
+            return await RedisplayEdit(vm);
+        }
+    }
+
+    // POST /FoundItems/Delete/5 — owner-only (service enforces)
+    [Authorize]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var ok = await _service.DeleteAsync(id, userId);
+        if (!ok) return NotFound();
+        TempData["SuccessMessage"] = "Đã xoá bài đăng.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    private async Task<IActionResult> RedisplayEdit(FoundItemEditViewModel vm)
+    {
+        vm.Categories = await BuildCategorySelectAsync(vm.CategoryId);
+        vm.Locations = await BuildLocationSelectAsync(vm.LocationId);
+        return View(vm);
+    }
+
     private async Task<List<SelectListItem>> BuildCategorySelectAsync(int? selected = null)
     {
         var cats = await _db.Category.AsNoTracking().ToListAsync();

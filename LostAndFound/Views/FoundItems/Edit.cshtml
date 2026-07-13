@@ -1,0 +1,95 @@
+@model FoundItemEditViewModel
+@{
+    ViewData["Title"] = "Sửa bài đăng";
+}
+
+<h1 class="h3 mb-3">Sửa bài đăng</h1>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="Id" />
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="mb-3">
+                <label asp-for="Title" class="form-label"></label>
+                <input asp-for="Title" class="form-control" />
+                <span asp-validation-for="Title" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label"></label>
+                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                <div class="form-text"><strong>Đừng</strong> viết đặc điểm bí mật trong mô tả công khai.</div>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+
+            <div class="row">
+                <div class="col-sm-6 mb-3">
+                    <label asp-for="CategoryId" class="form-label"></label>
+                    <select asp-for="CategoryId" asp-items="Model.Categories" class="form-select">
+                        <option value="">-- Chọn danh mục --</option>
+                    </select>
+                    <span asp-validation-for="CategoryId" class="text-danger"></span>
+                </div>
+                <div class="col-sm-6 mb-3">
+                    <label asp-for="LocationId" class="form-label"></label>
+                    <select asp-for="LocationId" asp-items="Model.Locations" class="form-select">
+                        <option value="">-- Chọn nơi nhặt --</option>
+                    </select>
+                    <span asp-validation-for="LocationId" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="FoundAt" class="form-label"></label>
+                <input asp-for="FoundAt" type="datetime-local" class="form-control" />
+                <span asp-validation-for="FoundAt" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="TagsRaw" class="form-label"></label>
+                <partial name="_TagInput" model="@Model.TagsRaw" />
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="mb-3">
+                <label class="form-label d-block">Hình thức giữ</label>
+                <span class="badge bg-light text-dark border">
+                    @(Model.HoldingType == HoldingType.Custodial ? "Ký gửi cho Staff" : "Người nhặt tự giữ")
+                </span>
+                <div class="form-text">Không đổi được sau khi đăng.</div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label d-block">Ảnh hiện tại</label>
+                @if (!string.IsNullOrEmpty(Model.CurrentImagePath))
+                {
+                    <img src="@Model.CurrentImagePath" class="img-fluid rounded mb-2" style="max-height:160px;" alt="ảnh hiện tại" />
+                }
+                else
+                {
+                    <div class="text-muted small mb-2">Chưa có ảnh</div>
+                }
+                <label asp-for="ImageFile" class="form-label"></label>
+                <input asp-for="ImageFile" type="file" accept="image/*" class="form-control" />
+                <span asp-validation-for="ImageFile" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="PrivateMarks" class="form-label"></label>
+                <textarea asp-for="PrivateMarks" class="form-control" rows="3"></textarea>
+                <div class="form-text">Không hiển thị công khai; người tới nhận không thấy.</div>
+                <span asp-validation-for="PrivateMarks" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Lưu</button>
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Huỷ</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

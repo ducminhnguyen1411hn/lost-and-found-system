@@ -26,3 +26,11 @@
 - **Notification:** none in this slice (no other user involved yet) — arrives with FR-MATCH/FR-CLAIM.
 - **Minimum tests (verified):** SelfHeld→Open shows on list; Custodial→PendingDropoff hidden from list + anon detail 404; reporter sees PrivateMarks, anon does not; FoundAt in future rejected; tag search matches on normalized form; AuditLog written with correct `IsPublic`.
 - **Easy to get wrong when copying:** the EF store-default sentinel (trap #1) and rendering a hidden field for non-holders (trap #2). Always upload images outside the DB transaction.
+
+## C. Follow-up: Edit + Delete (same feature)
+- **Scope:** owner-only (not even Admin), allowed only while `Open`/`PendingDropoff` **and no claim exists** (mirrors the "item with a Pending claim is locked" invariant). `HoldingType` is read-only on edit.
+- **Service:** `GetForEditAsync` / `UpdateAsync` / `DeleteAsync` + private `IsEditableAsync`. Update replaces the tag set by **RemoveRange old joins → SaveChanges → add resolved → SaveChanges** (two saves inside the tx to avoid a `UX_FoundItemTag_Item_Tag` clash). New image replaces old; empty keeps old. Delete relies on the `FoundItemTag` cascade FK.
+- **Detail VM:** added `CanEdit` (owner && editable && no claim) → drives the Sửa/Xoá buttons.
+- **AuditLog:** `"Updated"` / `"Deleted"` with `IsPublic=false` (internal — don't surface edit noise or leak what changed).
+- **Verified at runtime:** owner edit changes title+tags; non-owner (admin) Edit → 404; delete removes item (Details 404, gone from list).
+- **Gotcha:** run-lock — if the app is already running, `dotnet build` fails only on the *exe copy* (`MSB3027`); build to a temp `-o` dir to verify compilation without stopping the running instance.

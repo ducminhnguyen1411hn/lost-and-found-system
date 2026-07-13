@@ -151,6 +151,12 @@ public class FoundItemService : IFoundItemService
         // Non-Open items (e.g. Custodial PendingDropoff) are invisible to the public.
         if (status != FoundItemStatus.Open && !canSee) return null;
 
+        // Owner may edit/delete only while the item is still editable (no claim yet).
+        var hasClaim = await _db.Claim.AsNoTracking().AnyAsync(c => c.FoundItemId == id);
+        var canEdit = isReporter
+            && (status == FoundItemStatus.Open || status == FoundItemStatus.PendingDropoff)
+            && !hasClaim;
+
         var reporterName = await _db.Users.AsNoTracking()
             .Where(u => u.Id == item.ReporterUserId)
             .Select(u => u.FullName ?? u.Email)
@@ -184,7 +190,95 @@ public class FoundItemService : IFoundItemService
             CanSeePrivate = canSee,
             PrivateMarks = canSee ? item.PrivateMarks : null,
             StorageLocation = canSee ? item.StorageLocation : null,
+            CanEdit = canEdit,
             PublicEvents = events
         };
+    }
+
+    /// <inheritdoc />
+    public async Task<FoundItemEditViewModel?> GetForEditAsync(int id, string userId)
+    {
+        var item = await _db.FoundItem.AsNoTracking()
+            .Include(f => f.FoundItemTag).ThenInclude(ft => ft.Tag)
+            .FirstOrDefaultAsync(f => f.Id == id);
+
+        if (item is null || item.ReporterUserId != userId) return null; // owner-only
+        if (!await IsEditableAsync(item)) return null;
+
+        return new FoundItemEditViewModel
+        {
+            Id = item.Id,
+            Title = item.Title,
+            Description = item.Description,
+            CategoryId = item.CategoryId,
+            LocationId = item.LocationId,
+            FoundAt = item.FoundAt,
+            PrivateMarks = item.PrivateMarks,
+            TagsRaw = string.Join(", ", item.FoundItemTag.Select(ft => ft.Tag.DisplayTag)),
+            CurrentImagePath = item.ImagePath,
+            HoldingType = (HoldingType)item.HoldingType
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> UpdateAsync(int id, FoundItemEditViewModel vm, string userId)
+    {
+        var item = await _db.FoundItem.Include(f => f.FoundItemTag).FirstOrDefaultAsync(f => f.Id == id);
+        if (item is null || item.ReporterUserId != userId) return false; // owner-only
+        if (!await IsEditableAsync(item)) return false;
+
+        // Upload the replacement image (if any) before the transaction.
+        var newImageUrl = await _images.UploadAsync(vm.ImageFile, ImageFolder);
+
+        await using var tx = await _db.Database.BeginTransactionAsync();
+
+        item.Title = vm.Title.Trim();
+        item.Description = string.IsNullOrWhiteSpace(vm.Description) ? null : vm.Description.Trim();
+        item.CategoryId = vm.CategoryId!.Value;
+        item.LocationId = vm.LocationId!.Value;
+        item.FoundAt = vm.FoundAt!.Value;
+        item.PrivateMarks = string.IsNullOrWhiteSpace(vm.PrivateMarks) ? null : vm.PrivateMarks.Trim();
+        if (newImageUrl is not null) item.ImagePath = newImageUrl; // keep old image when no new upload
+
+        // Replace the tag set: delete old joins first (avoid a unique-key clash), then add the resolved tags.
+        _db.FoundItemTag.RemoveRange(item.FoundItemTag);
+        await _db.SaveChangesAsync();
+
+        var tags = await _tags.ResolveTagsAsync(vm.TagList);
+        foreach (var tag in tags)
+            _db.FoundItemTag.Add(new FoundItemTag { FoundItemId = item.Id, Tag = tag });
+        await _db.SaveChangesAsync();
+
+        await _audit.LogAsync(userId, "Updated", "FoundItem", item.Id.ToString(),
+            null, ((FoundItemStatus)item.Status).ToString(), "Cập nhật bài đăng", isPublic: false);
+
+        await tx.CommitAsync();
+        return true;
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> DeleteAsync(int id, string userId)
+    {
+        var item = await _db.FoundItem.FirstOrDefaultAsync(f => f.Id == id);
+        if (item is null || item.ReporterUserId != userId) return false; // owner-only
+        if (!await IsEditableAsync(item)) return false;
+
+        await using var tx = await _db.Database.BeginTransactionAsync();
+        _db.FoundItem.Remove(item); // FoundItemTag rows cascade
+        await _db.SaveChangesAsync();
+
+        await _audit.LogAsync(userId, "Deleted", "FoundItem", id.ToString(),
+            null, null, "Xoá bài đăng", isPublic: false);
+
+        await tx.CommitAsync();
+        return true;
+    }
+
+    /// <summary>Editable only while Open/PendingDropoff AND no claim exists yet.</summary>
+    private async Task<bool> IsEditableAsync(FoundItem item)
+    {
+        var status = (FoundItemStatus)item.Status;
+        if (status != FoundItemStatus.Open && status != FoundItemStatus.PendingDropoff) return false;
+        return !await _db.Claim.AsNoTracking().AnyAsync(c => c.FoundItemId == item.Id);
     }
 }

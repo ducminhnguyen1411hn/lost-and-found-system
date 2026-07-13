@@ -22,6 +22,10 @@ public class FoundItemDetailViewModel
     public string? PrivateMarks { get; init; }     // only set when CanSeePrivate
     public string? StorageLocation { get; init; }  // only set when CanSeePrivate
 
+    /// <summary>True only for the owner when the item is still editable (Open/PendingDropoff, no claims).
+    /// Drives the Sửa/Xoá buttons.</summary>
+    public bool CanEdit { get; init; }
+
     public IReadOnlyList<PublicEvent> PublicEvents { get; init; } = Array.Empty<PublicEvent>();
 
     /// <summary>A public (IsPublic=1) AuditLog row — the seed of the FR-TL timeline.</summary>
