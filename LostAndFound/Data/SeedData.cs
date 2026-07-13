@@ -1,5 +1,6 @@
 using LostAndFound.Models;
 using LostAndFound.Models.Entities;
+using LostAndFound.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -103,35 +104,46 @@ public static class SeedData
 
         if (!await db.Category.AnyAsync())
         {
-            var electronics = new Category { Name = "Điện tử" };
-            var papers = new Category { Name = "Giấy tờ" };
-            var personal = new Category { Name = "Đồ dùng cá nhân" };
-            var other = new Category { Name = "Khác" };
-            db.Category.AddRange(electronics, papers, personal, other);
-            await db.SaveChangesAsync(); // assign parent Ids
-
-            db.Category.AddRange(
-                new Category { Name = "Điện thoại", ParentId = electronics.Id },
-                new Category { Name = "Laptop", ParentId = electronics.Id },
-                new Category { Name = "Tai nghe", ParentId = electronics.Id },
-                new Category { Name = "Thẻ sinh viên", ParentId = papers.Id },
-                new Category { Name = "CCCD", ParentId = papers.Id },
-                new Category { Name = "Ví", ParentId = papers.Id },
-                new Category { Name = "Bình nước", ParentId = personal.Id },
-                new Category { Name = "Ô (dù)", ParentId = personal.Id },
-                new Category { Name = "Chìa khoá", ParentId = personal.Id });
+            // 2-level Vietnamese category tree. A parent with no children (e.g. "Khác") is itself selectable.
+            var tree = new (string Parent, string[] Children)[]
+            {
+                ("Điện tử", new[] { "Điện thoại", "Laptop", "Máy tính bảng", "Tai nghe", "Sạc & Cáp", "Chuột & Bàn phím", "Đồng hồ thông minh" }),
+                ("Giấy tờ", new[] { "Thẻ sinh viên", "CCCD/CMND", "Bằng lái xe", "Thẻ ngân hàng/ATM", "Sổ & Vở" }),
+                ("Ví & Túi", new[] { "Ví/Bóp", "Túi xách", "Balo", "Túi đựng laptop" }),
+                ("Đồ dùng cá nhân", new[] { "Chìa khoá", "Kính mắt", "Ô/Dù", "Bình giữ nhiệt", "Mũ/Nón", "Đồng hồ đeo tay" }),
+                ("Trang phục", new[] { "Áo khoác", "Khăn choàng", "Giày/Dép" }),
+                ("Khác", Array.Empty<string>()),
+            };
+            foreach (var (parent, children) in tree)
+            {
+                var p = new Category { Name = parent };
+                db.Category.Add(p);
+                await db.SaveChangesAsync(); // assign parent Id
+                foreach (var ch in children)
+                    db.Category.Add(new Category { Name = ch, ParentId = p.Id });
+            }
             await db.SaveChangesAsync();
         }
 
         if (!await db.Location.AnyAsync())
         {
             db.Location.AddRange(
-                new Location { Name = "Thư viện" },
-                new Location { Name = "Căng tin" },
-                new Location { Name = "Sảnh A" },
-                new Location { Name = "Sân trường" },
-                new Location { Name = "Phòng bảo vệ" });
+                new Location { Name = "Thư viện trung tâm" },
+                new Location { Building = "Toà A", Name = "Căng tin" },
+                new Location { Building = "Toà H1", Name = "Giảng đường 101" },
+                new Location { Building = "Toà H2", Name = "Giảng đường 205" },
+                new Location { Name = "Sảnh chính" },
+                new Location { Name = "Bãi giữ xe" },
+                new Location { Name = "Sân vận động" },
+                new Location { Name = "Ký túc xá khu B" },
+                new Location { Name = "Phòng bảo vệ" },
+                new Location { Name = "Hội trường lớn" },
+                new Location { Name = "Phòng thí nghiệm B4" },
+                new Location { Name = "Nhà xe sinh viên" });
             await db.SaveChangesAsync();
         }
+
+        // Demo dataset (~100 posts + users + images + tags + audit). Runs once, when there are no items.
+        await SeedDemoData.SeedAsync(db, userManager, sp.GetRequiredService<ITagService>());
     }
 }
