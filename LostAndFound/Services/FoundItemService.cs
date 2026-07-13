@@ -15,6 +15,7 @@ public class FoundItemService : IFoundItemService
 {
     private const string ImageFolder = "lostandfound/founditems";
     private const int MaxPageSize = 60;
+    private const int MaxImages = 7; // max photos per post
 
     private readonly ApplicationDbContext _db;
     private readonly ITagService _tags;
@@ -32,6 +33,11 @@ public class FoundItemService : IFoundItemService
     /// <inheritdoc />
     public async Task<int> CreateAsync(FoundItemCreateViewModel vm, string reporterUserId)
     {
+        // Enforce the per-post image cap BEFORE uploading (don't waste Cloudinary calls).
+        var intendedCount = (vm.CoverImage != null ? 1 : 0) + (vm.OtherImages?.Count ?? 0);
+        if (intendedCount > MaxImages)
+            throw new ImageUploadException($"Tối đa {MaxImages} ảnh mỗi bài.");
+
         // Upload BEFORE opening the DB transaction (network I/O must not hold a tx open).
         // Cover first (SortOrder 0), then the "other" images.
         var imageUrls = await UploadOrderedAsync(vm.CoverImage, vm.OtherImages);
@@ -240,6 +246,12 @@ public class FoundItemService : IFoundItemService
         if (item is null || item.ReporterUserId != userId) return false; // owner-only
         if (!await IsEditableAsync(item)) return false;
 
+        // Enforce the per-post image cap (kept + newly added) BEFORE uploading.
+        var removeIds = vm.RemoveImageIds ?? new List<int>();
+        var keptCount = item.FoundItemImage.Count(im => !removeIds.Contains(im.Id));
+        if (keptCount + (vm.NewImages?.Count ?? 0) > MaxImages)
+            throw new ImageUploadException($"Tối đa {MaxImages} ảnh mỗi bài.");
+
         // Upload any newly added images before the transaction.
         var newUrls = new List<string>();
         if (vm.NewImages is not null)
@@ -259,7 +271,6 @@ public class FoundItemService : IFoundItemService
         item.PrivateMarks = string.IsNullOrWhiteSpace(vm.PrivateMarks) ? null : vm.PrivateMarks.Trim();
 
         // Images: drop the ticked ones, keep the rest, append the new ones, renumber SortOrder (cover = 0).
-        var removeIds = vm.RemoveImageIds ?? new List<int>();
         var toRemove = item.FoundItemImage.Where(im => removeIds.Contains(im.Id)).ToList();
         if (toRemove.Count > 0) _db.FoundItemImage.RemoveRange(toRemove);
         var kept = item.FoundItemImage.Where(im => !removeIds.Contains(im.Id)).OrderBy(im => im.SortOrder).ToList();
