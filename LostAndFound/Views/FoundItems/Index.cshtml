@@ -1,6 +1,7 @@
 @model FoundItemSearchViewModel
 @{
     ViewData["Title"] = "Đồ nhặt được";
+    var nowMax = AppTime.LocalNow.ToString("yyyy-MM-ddTHH:mm");
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -34,11 +35,13 @@
     </div>
     <div class="col-md-4">
         <label asp-for="FoundFrom" class="form-label">Nhặt từ</label>
-        <input asp-for="FoundFrom" type="datetime-local" class="form-control" />
+        <input asp-for="FoundFrom" type="datetime-local" max="@nowMax" class="form-control" />
     </div>
     <div class="col-md-4">
         <label asp-for="FoundTo" class="form-label">Đến</label>
-        <input asp-for="FoundTo" type="datetime-local" class="form-control" />
+        <input asp-for="FoundTo" type="datetime-local" max="@nowMax" class="form-control" />
+        <span asp-validation-for="FoundTo" class="text-danger"></span>
+        <span asp-validation-for="FoundFrom" class="text-danger"></span>
     </div>
     <div class="col-12">
         <button type="submit" class="btn btn-outline-primary">Tìm kiếm</button>

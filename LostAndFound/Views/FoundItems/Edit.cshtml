@@ -1,6 +1,7 @@
 @model FoundItemEditViewModel
 @{
     ViewData["Title"] = "Sửa bài đăng";
+    var nowMax = AppTime.LocalNow.ToString("yyyy-MM-ddTHH:mm");
 }
 
 <h1 class="h3 mb-3">Sửa bài đăng</h1>
@@ -43,7 +44,7 @@
 
             <div class="mb-3">
                 <label asp-for="FoundAt" class="form-label"></label>
-                <input asp-for="FoundAt" type="datetime-local" class="form-control" />
+                <input asp-for="FoundAt" type="datetime-local" max="@nowMax" class="form-control" />
                 <span asp-validation-for="FoundAt" class="text-danger"></span>
             </div>
 

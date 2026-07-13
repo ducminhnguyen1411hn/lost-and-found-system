@@ -6,7 +6,7 @@ namespace LostAndFound.Models.ViewModels.FoundItems;
 
 /// <summary>Public list + search/filter/pagination state (FR-FOUND-04). Bound from the query string;
 /// the controller fills <see cref="Results"/> and the select lists.</summary>
-public class FoundItemSearchViewModel
+public class FoundItemSearchViewModel : IValidatableObject
 {
     public string? Keyword { get; set; }
     public int? CategoryId { get; set; }
@@ -28,4 +28,12 @@ public class FoundItemSearchViewModel
     public IEnumerable<SelectListItem> Locations { get; set; } = new List<SelectListItem>();
 
     public PagedResult<FoundItemListItemViewModel> Results { get; set; } = new();
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (FoundFrom.HasValue && FoundTo.HasValue && FoundFrom.Value > FoundTo.Value)
+            yield return new ValidationResult(
+                "\"Nhặt từ\" phải trước hoặc bằng \"Đến\".",
+                new[] { nameof(FoundFrom), nameof(FoundTo) });
+    }
 }
