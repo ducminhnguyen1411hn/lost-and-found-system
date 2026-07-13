@@ -33,14 +33,21 @@ namespace LostAndFound
                 .AddEntityFrameworkStores<ApplicationDbContext>();
 
             // ---- OAuth 2.0 Authentication (Google) ----
-            builder.Services.AddAuthentication()
-                .AddGoogle(options =>
-                {
-                    options.ClientId = builder.Configuration["Authentication:Google:ClientId"]
-                        ?? throw new InvalidOperationException("Google ClientId not found in configuration.");
-                    options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]
-                        ?? throw new InvalidOperationException("Google ClientSecret not found in configuration.");
-                });
+            // Register Google login ONLY when its credentials are configured (user-secrets / env / appsettings).
+            // The old code threw inside the options builder when the ClientId was missing; AuthenticationMiddleware
+            // builds that handler on EVERY request, so a missing secret returned HTTP 500 across the whole app.
+            // Skipping registration when unconfigured lets the app run fine (just without the Google login button).
+            var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
+            var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+            if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+            {
+                builder.Services.AddAuthentication()
+                    .AddGoogle(options =>
+                    {
+                        options.ClientId = googleClientId;
+                        options.ClientSecret = googleClientSecret;
+                    });
+            }
 
             // ---- MVC + Razor Pages + SignalR ----
             builder.Services.AddControllersWithViews();
