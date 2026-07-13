@@ -25,7 +25,7 @@
             <span class="me-2">🏷 @Model.CategoryName</span>
             <span>📍 @Model.LocationName</span>
         </p>
-        <p class="card-text small text-muted mb-2">🕒 Nhặt lúc @Model.FoundAt.ToString("dd/MM/yyyy HH:mm")</p>
+        <p class="card-text small text-muted mb-2">🕒 Nhặt lúc @AppTime.ToLocal(Model.FoundAt).ToString("dd/MM/yyyy HH:mm")</p>
         @if (!string.IsNullOrEmpty(Model.ShortDescription))
         {
             <p class="card-text small mb-2">@Model.ShortDescription</p>

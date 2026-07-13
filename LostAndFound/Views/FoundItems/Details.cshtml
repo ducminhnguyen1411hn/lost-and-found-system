@@ -90,7 +90,7 @@
             <dt class="col-sm-4">Nơi nhặt được</dt>
             <dd class="col-sm-8">@Model.LocationName</dd>
             <dt class="col-sm-4">Thời điểm nhặt</dt>
-            <dd class="col-sm-8">@Model.FoundAt.ToString("dd/MM/yyyy HH:mm")</dd>
+            <dd class="col-sm-8">@AppTime.ToLocal(Model.FoundAt).ToString("dd/MM/yyyy HH:mm")</dd>
             <dt class="col-sm-4">Người nhặt</dt>
             <dd class="col-sm-8">@Model.ReporterName</dd>
         </dl>
@@ -133,7 +133,7 @@
         @foreach (var e in Model.PublicEvents)
         {
             <li class="list-group-item px-0">
-                <span class="text-muted small">@e.At.ToString("dd/MM/yyyy HH:mm")</span>
+                <span class="text-muted small">@AppTime.ToLocal(e.At).ToString("dd/MM/yyyy HH:mm")</span>
                 — @(string.IsNullOrWhiteSpace(e.Detail) ? e.Action : e.Detail)
                 @if (!string.IsNullOrEmpty(e.ActorName))
                 {

@@ -53,7 +53,7 @@ public class FoundItemService : IFoundItemService
             Description = string.IsNullOrWhiteSpace(vm.Description) ? null : vm.Description.Trim(),
             CategoryId = vm.CategoryId!.Value,
             LocationId = vm.LocationId!.Value,
-            FoundAt = vm.FoundAt!.Value,
+            FoundAt = AppTime.ToUtc(vm.FoundAt!.Value), // form is local wall-clock -> store UTC
             Status = (int)status,
             HoldingType = (int)vm.HoldingType,
             PrivateMarks = string.IsNullOrWhiteSpace(vm.PrivateMarks) ? null : vm.PrivateMarks.Trim(),
@@ -105,8 +105,9 @@ public class FoundItemService : IFoundItemService
         }
         if (q.CategoryId is int cat) query = query.Where(f => f.CategoryId == cat);
         if (q.LocationId is int loc) query = query.Where(f => f.LocationId == loc);
-        if (q.FoundFrom is DateTime from) query = query.Where(f => f.FoundAt >= from);
-        if (q.FoundTo is DateTime to) query = query.Where(f => f.FoundAt < to.AddMinutes(1)); // inclusive of the selected "to" minute
+        // Filter bounds are local wall-clock -> convert to UTC to match the stored FoundAt.
+        if (q.FoundFrom is DateTime from) { var fromUtc = AppTime.ToUtc(from); query = query.Where(f => f.FoundAt >= fromUtc); }
+        if (q.FoundTo is DateTime to) { var toUtc = AppTime.ToUtc(to).AddMinutes(1); query = query.Where(f => f.FoundAt < toUtc); } // inclusive of the "to" minute
         if (!string.IsNullOrWhiteSpace(q.Tag))
         {
             var norm = _tags.Normalize(q.Tag);
@@ -232,7 +233,7 @@ public class FoundItemService : IFoundItemService
             Description = item.Description,
             CategoryId = item.CategoryId,
             LocationId = item.LocationId,
-            FoundAt = item.FoundAt,
+            FoundAt = AppTime.ToLocal(item.FoundAt), // stored UTC -> local for the datetime-local input
             PrivateMarks = item.PrivateMarks,
             TagsRaw = string.Join(", ", item.FoundItemTag.Select(ft => ft.Tag.DisplayTag)),
             ExistingImages = item.FoundItemImage
@@ -274,7 +275,7 @@ public class FoundItemService : IFoundItemService
         item.Description = string.IsNullOrWhiteSpace(vm.Description) ? null : vm.Description.Trim();
         item.CategoryId = vm.CategoryId!.Value;
         item.LocationId = vm.LocationId!.Value;
-        item.FoundAt = vm.FoundAt!.Value;
+        item.FoundAt = AppTime.ToUtc(vm.FoundAt!.Value); // form is local wall-clock -> store UTC
         item.PrivateMarks = string.IsNullOrWhiteSpace(vm.PrivateMarks) ? null : vm.PrivateMarks.Trim();
 
         // Images: drop the ticked ones, keep the rest, append the new ones, renumber SortOrder (cover = 0).

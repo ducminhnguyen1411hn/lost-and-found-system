@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using LostAndFound.Data;
 using LostAndFound.Models.ViewModels.FoundItems;
+using LostAndFound.Services;
 using LostAndFound.Services.Images;
 using LostAndFound.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -51,7 +52,7 @@ public class FoundItemsController : Controller
     {
         var vm = new FoundItemCreateViewModel
         {
-            FoundAt = DateTime.Now,
+            FoundAt = AppTime.LocalNow,
             Categories = await BuildCategorySelectAsync(),
             Locations = await BuildLocationSelectAsync()
         };

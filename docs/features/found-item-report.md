@@ -41,3 +41,9 @@
 - **Upload:** loop the existing single-file `IImageUploadService.UploadAsync` (cover first, then others) — no interface change. Still uploaded **before** the transaction.
 - **Verified at runtime:** create with 1 cover + 2 others → rows at SortOrder 0/1/2, list badge "📷 3", detail carousel of 3; edit-remove the cover → 2 rows renumbered to 0/1 (next image becomes cover), badge "📷 2".
 - **Trap:** the re-scaffold + column drop broke every `ImagePath` reference (VMs, service, views, controller `nameof(...ImageFile)`); the compiler lists them all — chase each. Re-running `--force` scaffold regenerated all entities but only `FoundItem` (lost `ImagePath`) + new `FoundItemImage` actually differed.
+
+## E. Time convention (project-wide — all features must follow)
+- **Store everything in UTC, display in app-local (Vietnam, UTC+7).** `CreatedAt` columns default to `SYSUTCDATETIME()` (already UTC). `FoundAt` was previously stored as server-local — a latent bug: the timeline (which shows `CreatedAt` raw) read 7 h behind `FoundAt`.
+- **Helper `Services/AppTime`:** `ToUtc(local)` on save (forms are local wall-clock), `ToLocal(utc)` for display / edit-prefill, `LocalNow` for defaults + not-in-future checks. Uses `TimeZoneInfo` (Asia/Ho_Chi_Minh, fallback fixed +7).
+- **Rules:** service converts FoundAt local→UTC on create/update and UTC→local on edit-prefill; date filters convert bounds local→UTC; **views display via `AppTime.ToLocal(...)`** (never render a stored UTC value raw). `NotInFuture` compares against `AppTime.LocalNow` (not `DateTime.Now`, so it's server-timezone-independent). Any new timestamped feature (Claim, Notification, ThankYou…) must do the same.
+- One-time data migration converted existing local `FoundAt` rows to UTC (`DATEADD(hour,-7,...)`).
