@@ -36,10 +36,12 @@
     <div class="col-md-4">
         <label asp-for="FoundFrom" class="form-label">Nhặt từ</label>
         <input asp-for="FoundFrom" type="datetime-local" max="@nowMax" class="form-control" />
+        <div class="form-text">Bỏ trống = từ sớm nhất.</div>
     </div>
     <div class="col-md-4">
         <label asp-for="FoundTo" class="form-label">Đến</label>
         <input asp-for="FoundTo" type="datetime-local" max="@nowMax" class="form-control" />
+        <div class="form-text">Bỏ trống = đến hiện tại.</div>
         <span asp-validation-for="FoundTo" class="text-danger"></span>
         <span asp-validation-for="FoundFrom" class="text-danger"></span>
     </div>
