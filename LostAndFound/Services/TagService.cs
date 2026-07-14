@@ -70,4 +70,21 @@ public class TagService : ITagService
         }
         return result;
     }
+
+    /// <inheritdoc />
+    public async Task<IEnumerable<string>> SuggestTagsAsync(string partial)
+    {
+        if (string.IsNullOrWhiteSpace(partial)) return Array.Empty<string>();
+
+        var norm = Normalize(partial);
+        if (norm.Length == 0) return Array.Empty<string>();
+
+        // Search tags where NormalizedTag contains the normalized partial, return DisplayTag for UI
+        return await _db.Tag.AsNoTracking()
+            .Where(t => t.NormalizedTag.Contains(norm))
+            .OrderBy(t => t.DisplayTag)
+            .Select(t => t.DisplayTag)
+            .Take(10)
+            .ToListAsync();
+    }
 }
