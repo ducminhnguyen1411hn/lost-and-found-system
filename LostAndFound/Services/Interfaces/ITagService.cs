@@ -16,4 +16,8 @@ public interface ITagService
     /// <summary>Resolve raw tag strings to <see cref="Tag"/> rows, creating any that don't exist
     /// (deduped on NormalizedTag).</summary>
     Task<IEnumerable<Tag>> ResolveTagsAsync(IEnumerable<string> rawTags);
+
+    /// <summary>Suggest existing tags that match the partial input (case-insensitive, uses NormalizedTag).
+    /// Returns the top matching DisplayTag values for autocomplete UI.</summary>
+    Task<IEnumerable<string>> SuggestTagsAsync(string partial);
 }
