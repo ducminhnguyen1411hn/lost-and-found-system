@@ -9,6 +9,14 @@
     <UserSecretsId>8a9f12e6-9255-45a6-874a-a0dd6a47f6de</UserSecretsId>
   </PropertyGroup>
 
+  <!-- Some machines' Application Control / Smart App Control policy blocks the unsigned apphost
+       (LostAndFound.exe), so `dotnet run` / F5 fail with "An Application Control policy has blocked
+       this file". Skip generating the apphost in Debug — the app then runs via the signed `dotnet`
+       host (dotnet run / launch the .dll), which is allowed. Release still builds an apphost. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <UseAppHost>false</UseAppHost>
+  </PropertyGroup>
+
   <ItemGroup>
     <!-- EF Core (DB-First) + ASP.NET Core Identity + default Identity UI. All pinned to the 8.0.x line. -->
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.0" />
