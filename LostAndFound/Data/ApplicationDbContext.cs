@@ -34,6 +34,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<FoundItemImage> FoundItemImage => Set<FoundItemImage>();
     public DbSet<FoundItemTag> FoundItemTag => Set<FoundItemTag>();
     public DbSet<Claim> Claim => Set<Claim>();
+    public DbSet<ClaimImage> ClaimImage => Set<ClaimImage>();
     public DbSet<CameraCheckRequest> CameraCheckRequest => Set<CameraCheckRequest>();
     public DbSet<ThankYou> ThankYou => Set<ThankYou>();
     public DbSet<Notification> Notification => Set<Notification>();
@@ -105,13 +106,21 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(e => e.HandledByUserId, "IX_Claim_HandledByUserId");
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
-            entity.Property(e => e.EvidenceImagePath).HasMaxLength(400);
             entity.Property(e => e.RejectReason).HasMaxLength(1000);
             entity.Property(e => e.VerificationDetails).HasMaxLength(2000);
 
             entity.HasOne(d => d.FoundItem).WithMany(p => p.Claim)
                 .HasForeignKey(d => d.FoundItemId)
                 .OnDelete(DeleteBehavior.ClientSetNull);
+        });
+
+        modelBuilder.Entity<ClaimImage>(entity =>
+        {
+            entity.HasIndex(e => e.ClaimId, "IX_ClaimImage_ClaimId");
+
+            entity.Property(e => e.Url).HasMaxLength(400);
+
+            entity.HasOne(d => d.Claim).WithMany(p => p.ClaimImage).HasForeignKey(d => d.ClaimId);
         });
 
         modelBuilder.Entity<FoundItem>(entity =>

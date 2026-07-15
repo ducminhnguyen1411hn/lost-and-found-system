@@ -33,6 +33,9 @@
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-controller="LostItems" asp-action="Create">Đăng đồ mất</a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Claims" asp-action="My">Yêu cầu của tôi</a>
+                            </li>
                         }
                         @if (User.IsInRole("Admin"))
                         {
@@ -55,6 +58,14 @@
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Chính sách</a>
                         </li>
+                    </ul>
+                    <ul class="navbar-nav">
+                        @if (User.Identity is not null && User.Identity.IsAuthenticated)
+                        {
+                            <li class="nav-item">
+                                @await Component.InvokeAsync("NotificationBell")
+                            </li>
+                        }
                     </ul>
                     <partial name="_LoginPartial" />
                 </div>

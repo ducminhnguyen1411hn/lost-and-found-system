@@ -1,0 +1,59 @@
+@model IReadOnlyList<MyClaimViewModel>
+@using LostAndFound.Models.Enums
+@{ ViewData["Title"] = "Yêu cầu nhận lại của tôi"; }
+
+<h1 class="h4 mb-3">Yêu cầu nhận lại của tôi</h1>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+
+@if (Model.Count == 0)
+{
+    <p class="text-muted">Bạn chưa gửi yêu cầu nhận lại nào.</p>
+}
+else
+{
+    <div class="list-group">
+        @foreach (var c in Model)
+        {
+            string badge = c.Status switch
+            {
+                ClaimStatus.Pending => "<span class='badge bg-warning text-dark'>Đang chờ</span>",
+                ClaimStatus.Accepted => "<span class='badge bg-success'>Được chấp nhận</span>",
+                ClaimStatus.Rejected => "<span class='badge bg-secondary'>Bị từ chối</span>",
+                _ => ""
+            };
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between">
+                    <a asp-controller="FoundItems" asp-action="Details" asp-route-id="@c.FoundItemId" class="fw-semibold text-decoration-none">@c.ItemTitle</a>
+                    @Html.Raw(badge)
+                </div>
+                <div class="small text-muted">Gửi @AppTime.ToLocal(c.CreatedAt).ToString("dd/MM/yyyy HH:mm")</div>
+                @if (c.Status == ClaimStatus.Rejected && !string.IsNullOrWhiteSpace(c.RejectReason))
+                {
+                    <div class="small text-danger">Lý do từ chối: @c.RejectReason</div>
+                }
+                @if (c.Status == ClaimStatus.Accepted && c.ItemStatus == FoundItemStatus.ClaimAccepted)
+                {
+                    <div class="mt-2 small">
+                        Người giữ bàn giao: @(c.HolderConfirmed ? "✅" : "⏳") ·
+                        Bạn xác nhận nhận: @(c.ClaimantConfirmed ? "✅" : "⏳")
+                    </div>
+                    @if (c.CanConfirmReceived)
+                    {
+                        <form asp-controller="Claims" asp-action="ConfirmReceived" asp-route-foundItemId="@c.FoundItemId" method="post" class="mt-2">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-success btn-sm">Xác nhận đã nhận đồ</button>
+                        </form>
+                    }
+                }
+                @if (c.ItemStatus == FoundItemStatus.Returned)
+                {
+                    <div class="mt-1 small text-success">Đã hoàn tất trả đồ ✅</div>
+                }
+            </div>
+        }
+    </div>
+}

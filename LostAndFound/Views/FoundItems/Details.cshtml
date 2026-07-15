@@ -125,6 +125,8 @@
     </div>
 </div>
 
+@await Component.InvokeAsync("ItemClaimPanel", new { itemId = Model.Id })
+
 @if (Model.PublicEvents.Count > 0)
 {
     <hr />

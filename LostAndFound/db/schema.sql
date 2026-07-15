@@ -412,6 +412,32 @@ BEGIN
 END
 GO
 
+-- ClaimImage: 1-to-many evidence photos of a Claim (SortOrder ascending). Cascade-deletes with its claim.
+IF OBJECT_ID(N'dbo.ClaimImage', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ClaimImage (
+        Id        int           NOT NULL IDENTITY(1,1) CONSTRAINT PK_ClaimImage PRIMARY KEY,
+        ClaimId   int           NOT NULL,
+        Url       nvarchar(400) NOT NULL,
+        SortOrder int           NOT NULL CONSTRAINT DF_ClaimImage_SortOrder DEFAULT (0),
+        CONSTRAINT FK_ClaimImage_Claim_ClaimId FOREIGN KEY (ClaimId) REFERENCES dbo.Claim (Id) ON DELETE CASCADE
+    );
+    CREATE INDEX IX_ClaimImage_ClaimId ON dbo.ClaimImage (ClaimId);
+END
+GO
+
+-- Reconcile older DBs: migrate the legacy single Claim.EvidenceImagePath into ClaimImage (SortOrder 0)
+-- and drop the column. Idempotent: runs only while the column still exists. Dynamic SQL because a static
+-- reference to a since-dropped column would fail the whole batch on a fresh DB.
+IF COL_LENGTH(N'dbo.Claim', N'EvidenceImagePath') IS NOT NULL
+BEGIN
+    EXEC sys.sp_executesql N'
+        INSERT INTO dbo.ClaimImage (ClaimId, Url, SortOrder)
+        SELECT Id, EvidenceImagePath, 0 FROM dbo.Claim WHERE EvidenceImagePath IS NOT NULL AND EvidenceImagePath <> N'''';
+        ALTER TABLE dbo.Claim DROP COLUMN EvidenceImagePath;';
+END
+GO
+
 -- CameraCheckRequest: a request for staff to review camera footage. Status int enum.
 IF OBJECT_ID(N'dbo.CameraCheckRequest', N'U') IS NULL
 BEGIN

@@ -13,8 +13,6 @@ public partial class Claim
 
     public string VerificationDetails { get; set; } = null!;
 
-    public string? EvidenceImagePath { get; set; }
-
     public int Status { get; set; }
 
     public string? HandledByUserId { get; set; }
@@ -24,6 +22,8 @@ public partial class Claim
     public DateTime CreatedAt { get; set; }
 
     public DateTime? HandledAt { get; set; }
+
+    public virtual ICollection<ClaimImage> ClaimImage { get; set; } = new List<ClaimImage>();
 
     public virtual FoundItem FoundItem { get; set; } = null!;
 }

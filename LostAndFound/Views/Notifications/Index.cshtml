@@ -1,0 +1,52 @@
+@model IReadOnlyList<NotificationItemViewModel>
+@{ ViewData["Title"] = "Thông báo"; }
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">Thông báo</h1>
+    @if (Model.Any(n => !n.IsRead))
+    {
+        <form asp-action="MarkAllRead" method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-outline-secondary btn-sm">Đánh dấu tất cả đã đọc</button>
+        </form>
+    }
+</div>
+
+@if (Model.Count == 0)
+{
+    <p class="text-muted">Chưa có thông báo nào.</p>
+}
+else
+{
+    <ul class="list-group">
+        @foreach (var n in Model)
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-start @(n.IsRead ? "" : "list-group-item-warning")">
+                <div class="me-2">
+                    <div class="@(n.IsRead ? "" : "fw-semibold")">
+                        @if (!string.IsNullOrWhiteSpace(n.LinkUrl))
+                        {
+                            <a href="@n.LinkUrl" class="text-decoration-none">@n.Title</a>
+                        }
+                        else
+                        {
+                            @n.Title
+                        }
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(n.Message))
+                    {
+                        <div class="small text-muted">@n.Message</div>
+                    }
+                    <div class="small text-muted">@AppTime.ToLocal(n.CreatedAt).ToString("dd/MM/yyyy HH:mm")</div>
+                </div>
+                @if (!n.IsRead)
+                {
+                    <form asp-action="MarkRead" asp-route-id="@n.Id" method="post" class="ms-2">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm btn-outline-secondary" title="Đánh dấu đã đọc">✓</button>
+                    </form>
+                }
+            </li>
+        }
+    </ul>
+}
