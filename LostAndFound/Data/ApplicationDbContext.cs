@@ -36,6 +36,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Notification> Notification => Set<Notification>();
     public DbSet<AuditLog> AuditLog => Set<AuditLog>();
 
+    // Identity users (for admin queries)
+    public new DbSet<ApplicationUser> Users => Set<ApplicationUser>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Identity table mapping MUST run first.
@@ -62,6 +65,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.FromStatus).HasMaxLength(50);
             entity.Property(e => e.IpAddress).HasMaxLength(64);
             entity.Property(e => e.ToStatus).HasMaxLength(50);
+
+            entity.HasOne(d => d.ActorUser).WithMany()
+                .HasForeignKey(d => d.ActorUserId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
         });
 
         modelBuilder.Entity<CameraCheckRequest>(entity =>
@@ -128,6 +135,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
             entity.HasOne(d => d.Location).WithMany(p => p.FoundItem)
                 .HasForeignKey(d => d.LocationId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
+
+            entity.HasOne(d => d.ReporterUser).WithMany()
+                .HasForeignKey(d => d.ReporterUserId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
+
+            entity.HasOne(d => d.CustodianStaff).WithMany()
+                .HasForeignKey(d => d.CustodianStaffId)
                 .OnDelete(DeleteBehavior.ClientSetNull);
         });
 

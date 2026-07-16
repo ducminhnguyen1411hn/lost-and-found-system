@@ -69,6 +69,7 @@ namespace LostAndFound
             builder.Services.AddScoped<IAuditService, AuditService>();
             builder.Services.AddScoped<IImageUploadService, CloudinaryImageUploadService>();
             builder.Services.AddScoped<IFoundItemService, FoundItemService>();
+            builder.Services.AddScoped<IAdminService, AdminService>();
 
             var app = builder.Build();
 

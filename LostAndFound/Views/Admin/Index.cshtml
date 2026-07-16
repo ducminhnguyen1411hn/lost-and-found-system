@@ -1,0 +1,149 @@
+@model LostAndFound.Models.ViewModels.Admin.DashboardViewModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<div class="container mt-4 mb-5">
+    <h3 class="fw-bold mb-1 text-dark">Admin Dashboard</h3>
+    <p class="text-muted mb-4">Overview of system statistics and recent activity</p>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show mb-4 border-0" role="alert" style="background-color: #dcfce7; color: #166534; border-radius: 6px;">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Stats Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 8px;">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2" style="font-size: 0.85rem;">Total Found Items</h6>
+                    <h3 class="fw-bold mb-0 text-dark">@Model.TotalFoundItems</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 8px;">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2" style="font-size: 0.85rem;">Returned Items</h6>
+                    <h3 class="fw-bold mb-0 text-success">@Model.ReturnedItems</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 8px;">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2" style="font-size: 0.85rem;">Return Rate</h6>
+                    <h3 class="fw-bold mb-0 text-primary">@Model.ReturnRate.ToString("F1")%</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 8px;">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2" style="font-size: 0.85rem;">Avg Return Time</h6>
+                    <h3 class="fw-bold mb-0 text-info">@Model.AverageReturnDays.ToString("F1") days</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 8px;">
+                <div class="card-body">
+                    <h6 class="text-muted mb-3" style="font-size: 0.85rem;">Longest Unclaimed Item</h6>
+                    <h3 class="fw-bold mb-0 text-warning">@Model.LongestUnclaimedDays days</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 8px;">
+                <div class="card-body">
+                    <h6 class="text-muted mb-3" style="font-size: 0.85rem;">Quick Actions</h6>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a asp-action="Categories" class="btn btn-outline-primary btn-sm" style="border-radius: 6px;">Manage Categories</a>
+                        <a asp-action="Locations" class="btn btn-outline-primary btn-sm" style="border-radius: 6px;">Manage Locations</a>
+                        <a asp-action="Tags" class="btn btn-outline-primary btn-sm" style="border-radius: 6px;">Manage Tags</a>
+                        <a asp-action="Unclaimed" class="btn btn-outline-warning btn-sm" style="border-radius: 6px;">Unclaimed Items</a>
+                        <a asp-action="AuditLog" class="btn btn-outline-secondary btn-sm" style="border-radius: 6px;">Audit Log</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 8px;">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3 text-dark">Top Finders</h6>
+                    @if (Model.TopFinders.Any())
+                    {
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th class="border-0">User</th>
+                                    <th class="border-0 text-end">Items Found</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var finder in Model.TopFinders)
+                                {
+                                    <tr>
+                                        <td class="border-0">@finder.FullName</td>
+                                        <td class="border-0 text-end fw-bold">@finder.ItemsFound</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">No data available</p>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 8px;">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3 text-dark">Recent Activity</h6>
+                    @if (Model.RecentActivities.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th class="border-0">Action</th>
+                                        <th class="border-0">Entity</th>
+                                        <th class="border-0">Actor</th>
+                                        <th class="border-0">Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var activity in Model.RecentActivities)
+                                    {
+                                        <tr>
+                                            <td class="border-0">@activity.Action</td>
+                                            <td class="border-0">@activity.EntityType #@activity.EntityId</td>
+                                            <td class="border-0">@activity.ActorName</td>
+                                            <td class="border-0 text-muted" style="font-size: 0.85rem;">@activity.CreatedAt.ToString("MM/dd HH:mm")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">No recent activity</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
