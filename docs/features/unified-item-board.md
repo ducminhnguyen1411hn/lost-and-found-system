@@ -40,6 +40,14 @@
 2. **Filtering by a parent category returned 0 results.** Categories are a 2-level tree and items are filed on the **leaf**, so a parent holds zero items of its own (`Ví & Túi` = 0; its children Ví/Bóp, Túi xách, Balo held them all). `Where(x => x.CategoryId == c)` therefore matched nothing. **Fix:** resolve `self + children` ids once (`c.Id == cat || c.ParentId == cat` — depth is fixed at 2) and match with `Contains` on both union branches. Verified: parent went 0 → 11, exactly the sum of its three children.
 - **Both bugs were invisible to the compiler and to every route-level smoke test** — `/Items?CategoryId=15` returned HTTP 200 with "0 kết quả", and a black card is still a 200. Status-code checks prove the pipe is connected, not that the answer is right. Assert on *numbers that must add up* (parent == sum of children) and *look at the rendered page*.
 
+## B4. Follow-up: "Bài đăng của tôi" (`/Items/Mine`)
+
+- **The gap:** the board only lists `Open`, and nav only had *Bảng đồ* + *Yêu cầu của tôi* (which is for **claimants**). So the moment your own post moved to `ClaimAccepted`/`Returned`/`PendingDropoff`, **the person who posted it had no way back to it** except a notification link or typing the URL.
+- **Almost free, because it's the same board with a different scope:** reused `ItemBoardService.SearchAsync` (union + filters + paging), `_BoardFilters`, and `_BoardItemCard` as-is. No new wireframe — it *is* the board.
+- **The one real risk, and the design that removes it:** the owner filter is a **separate service parameter** (`SearchAsync(q, ownerUserId)`), NOT a property on `BoardSearchViewModel`. Had it lived on the bound VM, `?OwnerUserId=<someone-else>` would have let anyone read another user's **hidden non-Open posts** — the exact data the public board is careful to hide. Verified: `/Items?OwnerUserId=whatever` returns identical results to `/Items` (the param is ignored), and `/Items/Mine` is `[Authorize]` + 302 for anonymous.
+- **Extracted `_BoardShell`** (sidebar + grid + pager + offcanvas) so Index and Mine are ~10-line hosts that differ only in ViewData (`BoardAction`, `BoardHeading`, `BoardEmpty`, `ShowStatus`). Copying the 83-line Index would have been the handover-panel mistake all over again.
+- **`BoardItemViewModel.StatusRaw` + `StatusText`:** the union carries a raw status int, and the label depends on `Kind` — the two sides do **not** share a scale (`FoundItemStatus.Open = 1` vs `LostItemStatus.Open = 0`), so it must never be read without checking `Kind`. The badge shows only on Mine (`ShowStatus`); on the public Open-only board it would say nothing.
+
 ## C. Follow-ups
 - Old `FoundItemService.SearchAsync` / `LostItemService.SearchAsync` are now unused (the board no longer calls them). Left in place deliberately — deleting them was out of scope. Remove them if nothing else picks them up.
 - Sort is fixed to newest-first; the wireframe shows a "Sắp xếp" control that isn't wired yet.

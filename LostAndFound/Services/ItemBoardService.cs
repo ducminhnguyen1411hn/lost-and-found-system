@@ -38,10 +38,15 @@ public class ItemBoardService : IItemBoardService
         public string LocationName { get; set; } = string.Empty;
         public DateTime OccurredAt { get; set; }
         public DateTime CreatedAt { get; set; }
+        public int Status { get; set; }
     }
 
-    public async Task<PagedResult<BoardItemViewModel>> SearchAsync(BoardSearchViewModel q)
+    /// <inheritdoc />
+    public async Task<PagedResult<BoardItemViewModel>> SearchAsync(BoardSearchViewModel q, string? ownerUserId = null)
     {
+        // null = public board (Open only, all owners). Non-null = that user's own posts, every status.
+        // See IItemBoardService: this is deliberately NOT model-bound.
+        var mine = ownerUserId is not null;
         var page = q.Page < 1 ? 1 : q.Page;
         var pageSize = q.PageSize < 1 ? 12 : Math.Min(q.PageSize, MaxPageSize);
 
@@ -65,7 +70,11 @@ public class ItemBoardService : IItemBoardService
 
         if (q.Kind != ItemKind.Lost) // "Tất cả" or "Đồ nhặt được"
         {
-            var fq = _db.FoundItem.AsNoTracking().Where(x => x.Status == (int)FoundItemStatus.Open);
+            var fq = _db.FoundItem.AsNoTracking();
+            // Owner sees every status of their own posts; the public sees only Open.
+            fq = mine
+                ? fq.Where(x => x.ReporterUserId == ownerUserId)
+                : fq.Where(x => x.Status == (int)FoundItemStatus.Open);
             if (kw != null) fq = fq.Where(x => x.Title.Contains(kw) || (x.Description != null && x.Description.Contains(kw)));
             if (catIds != null) fq = fq.Where(x => catIds.Contains(x.CategoryId));
             if (q.LocationId is int l) fq = fq.Where(x => x.LocationId == l);
@@ -81,13 +90,18 @@ public class ItemBoardService : IItemBoardService
                 CategoryName = x.Category.Name,
                 LocationName = x.Location.Name,
                 OccurredAt = x.FoundAt,
-                CreatedAt = x.CreatedAt
+                CreatedAt = x.CreatedAt,
+                Status = x.Status
             });
         }
 
         if (q.Kind != ItemKind.Found) // "Tất cả" or "Đồ bị mất"
         {
-            var lq = _db.LostItem.AsNoTracking().Where(x => x.Status == (int)LostItemStatus.Open);
+            var lq = _db.LostItem.AsNoTracking();
+            // NB: LostItemStatus.Open = 0 while FoundItemStatus.Open = 1 — the two scales differ.
+            lq = mine
+                ? lq.Where(x => x.OwnerUserId == ownerUserId)
+                : lq.Where(x => x.Status == (int)LostItemStatus.Open);
             if (kw != null) lq = lq.Where(x => x.Title.Contains(kw) || (x.Description != null && x.Description.Contains(kw)));
             if (catIds != null) lq = lq.Where(x => catIds.Contains(x.CategoryId));
             if (q.LocationId is int l) lq = lq.Where(x => x.LocationId == l);
@@ -103,7 +117,8 @@ public class ItemBoardService : IItemBoardService
                 CategoryName = x.Category.Name,
                 LocationName = x.Location.Name,
                 OccurredAt = x.LostAt,
-                CreatedAt = x.CreatedAt
+                CreatedAt = x.CreatedAt,
+                Status = x.Status
             });
 
             union = union is null ? lRows : union.Concat(lRows);
@@ -166,7 +181,8 @@ public class ItemBoardService : IItemBoardService
                 CreatedAt = r.CreatedAt,
                 CoverImagePath = imgs.Count > 0 ? imgs[0].Url : null,
                 ImageCount = imgs.Count,
-                DisplayTags = tags
+                DisplayTags = tags,
+                StatusRaw = r.Status
             };
         }).ToList();
 

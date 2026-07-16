@@ -1,6 +1,10 @@
 @model BoardSearchViewModel
+@{
+    // The same filters drive the public board and "Bài đăng của tôi" — the host page says where to post.
+    var boardAction = (string?)ViewData["BoardAction"] ?? "Index";
+}
 
-<form asp-controller="Items" asp-action="Index" method="get" class="d-flex flex-column gap-3">
+<form asp-controller="Items" asp-action="@boardAction" method="get" class="d-flex flex-column gap-3">
     <div>
         <label class="form-label small text-uppercase text-muted fw-semibold">Loại</label>
         <div class="form-check">
@@ -51,6 +55,6 @@
 
     <div class="d-flex gap-2">
         <button type="submit" class="btn btn-primary btn-sm flex-fill">Tìm kiếm</button>
-        <a asp-controller="Items" asp-action="Index" class="btn btn-outline-secondary btn-sm">Xoá lọc</a>
+        <a asp-controller="Items" asp-action="@boardAction" class="btn btn-outline-secondary btn-sm">Xoá lọc</a>
     </div>
 </form>

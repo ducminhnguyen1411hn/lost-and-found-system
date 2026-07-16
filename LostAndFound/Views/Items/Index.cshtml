@@ -1,9 +1,10 @@
 @model BoardSearchViewModel
 @{
     ViewData["Title"] = "Bảng đồ";
-    ViewData["ShowKindPill"] = !Model.Kind.HasValue; // pill only informs when both sides are mixed
-    var r = Model.Results;
-    var totalPages = r.PageSize > 0 ? (int)Math.Ceiling(r.TotalCount / (double)r.PageSize) : 1;
+    ViewData["BoardAction"] = "Index";
+    ViewData["BoardHeading"] = "Bảng đồ";
+    ViewData["ShowKindPill"] = !Model.Kind.HasValue; // the pill only informs when both sides are mixed
+    ViewData["ShowStatus"] = false;                  // the public board is Open-only, so a status badge is noise
 }
 
 @if (TempData["SuccessMessage"] != null)
@@ -11,72 +12,4 @@
     <div class="alert alert-success">@TempData["SuccessMessage"]</div>
 }
 
-<div class="row g-4">
-    <aside class="col-lg-3 d-none d-lg-block">
-        <div class="position-sticky" style="top:1rem;">
-            <h2 class="h6 text-uppercase text-muted fw-semibold mb-3">Bộ lọc</h2>
-            <partial name="_BoardFilters" model="Model" />
-        </div>
-    </aside>
-
-    <div class="col-lg-9">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-            <h1 class="h4 mb-0">Bảng đồ</h1>
-            @if (User.Identity is not null && User.Identity.IsAuthenticated)
-            {
-                <a asp-controller="Items" asp-action="Create" class="btn btn-primary btn-sm">+ Đăng bài</a>
-            }
-        </div>
-
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-            <span class="text-muted small">@r.TotalCount kết quả</span>
-            <button class="btn btn-outline-secondary btn-sm d-lg-none" type="button"
-                    data-bs-toggle="offcanvas" data-bs-target="#filterOffcanvas">
-                Bộ lọc @(Model.ActiveFilterCount > 0 ? $"({Model.ActiveFilterCount})" : "")
-            </button>
-        </div>
-
-        @if (r.Items.Count == 0)
-        {
-            <p class="text-muted">Không tìm thấy món nào khớp bộ lọc.</p>
-        }
-        else
-        {
-            <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
-                @foreach (var item in r.Items)
-                {
-                    <partial name="_BoardItemCard" model="item" />
-                }
-            </div>
-
-            @if (totalPages > 1)
-            {
-                <nav class="mt-4 d-flex justify-content-center">
-                    <ul class="pagination pagination-sm mb-0">
-                        @for (int p = 1; p <= totalPages; p++)
-                        {
-                            <li class="page-item @(p == r.Page ? "active" : "")">
-                                <a class="page-link"
-                                   asp-controller="Items" asp-action="Index"
-                                   asp-route-Kind="@Model.Kind" asp-route-Keyword="@Model.Keyword"
-                                   asp-route-CategoryId="@Model.CategoryId" asp-route-LocationId="@Model.LocationId"
-                                   asp-route-Tag="@Model.Tag" asp-route-From="@Model.From?.ToString("yyyy-MM-ddTHH:mm")"
-                                   asp-route-To="@Model.To?.ToString("yyyy-MM-ddTHH:mm")" asp-route-Page="@p">@p</a>
-                            </li>
-                        }
-                    </ul>
-                </nav>
-            }
-        }
-    </div>
-</div>
-
-<div class="offcanvas offcanvas-start" tabindex="-1" id="filterOffcanvas">
-    <div class="offcanvas-header">
-        <h2 class="offcanvas-title h6">Bộ lọc</h2>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Đóng"></button>
-    </div>
-    <div class="offcanvas-body">
-        <partial name="_BoardFilters" model="Model" />
-    </div>
-</div>
+<partial name="_BoardShell" model="Model" />

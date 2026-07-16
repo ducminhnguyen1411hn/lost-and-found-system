@@ -25,6 +25,9 @@
                         @if (User.Identity is not null && User.Identity.IsAuthenticated && !User.IsInRole("Admin"))
                         {
                             <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Items" asp-action="Mine">Bài đăng của tôi</a>
+                            </li>
+                            <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-controller="Claims" asp-action="My">Yêu cầu của tôi</a>
                             </li>
                         }

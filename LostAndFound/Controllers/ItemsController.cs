@@ -41,6 +41,17 @@ public class ItemsController : Controller
         return View(q);
     }
 
+    /// <summary>The signed-in user's own posts, in every status. The owner id comes from the SIGNED-IN
+    /// user — never from the query string, or anyone could read another user's hidden (non-Open) posts.</summary>
+    [Authorize]
+    [HttpGet]
+    public async Task<IActionResult> Mine(BoardSearchViewModel q)
+    {
+        q.Results = await _board.SearchAsync(q, Uid);
+        await FillLookupsAsync(l => q.Categories = l, l => q.Locations = l);
+        return View(q);
+    }
+
     [Authorize(Roles = "Member,Staff,Admin")]
     [HttpGet]
     public async Task<IActionResult> Create(ItemKind kind = ItemKind.Found)
