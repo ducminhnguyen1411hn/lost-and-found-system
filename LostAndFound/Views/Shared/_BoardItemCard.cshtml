@@ -1,0 +1,49 @@
+@model BoardItemViewModel
+@{
+    var isFound = Model.Kind == ItemKind.Found;
+    var controller = isFound ? "FoundItems" : "LostItems";
+    // The type pill only carries information while both sides are listed together.
+    var showPill = (bool)(ViewData["ShowKindPill"] ?? true);
+}
+
+<div class="col">
+    <div class="card h-100 position-relative">
+        <div class="ratio ratio-4x3 bg-light">
+            @if (!string.IsNullOrWhiteSpace(Model.CoverImagePath))
+            {
+                <img src="@Model.CoverImagePath" class="card-img-top object-fit-cover" alt="@Model.Title" />
+            }
+            else
+            {
+                <div class="d-flex align-items-center justify-content-center text-muted small">Không có ảnh</div>
+            }
+            @if (Model.ImageCount > 1)
+            {
+                <span class="badge text-bg-dark position-absolute top-0 end-0 m-2">📷 @Model.ImageCount</span>
+            }
+        </div>
+        <div class="card-body d-flex flex-column gap-1 py-2">
+            @if (showPill)
+            {
+                <span class="badge rounded-pill @(isFound ? "text-bg-success" : "text-bg-warning") align-self-start">
+                    @(isFound ? "Nhặt được" : "Bị mất")
+                </span>
+            }
+            <h3 class="h6 card-title mb-0">
+                <a asp-controller="@controller" asp-action="Details" asp-route-id="@Model.Id"
+                   class="stretched-link text-decoration-none">@Model.Title</a>
+            </h3>
+            <div class="small text-muted">@Model.CategoryName · @Model.LocationName</div>
+            <div class="small text-muted">@AppTime.Relative(Model.OccurredAt)</div>
+            @if (Model.DisplayTags.Count > 0)
+            {
+                <div class="d-flex flex-wrap gap-1 mt-1">
+                    @foreach (var t in Model.DisplayTags.Take(3))
+                    {
+                        <span class="badge text-bg-light border fw-normal">@t</span>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>

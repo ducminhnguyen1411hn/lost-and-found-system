@@ -1,0 +1,127 @@
+@model ItemCreateViewModel
+@{ ViewData["Title"] = "Đăng bài"; }
+
+<h1 class="h4 mb-3">Đăng bài</h1>
+
+<form asp-action="Create" method="post" enctype="multipart/form-data" class="row g-3" style="max-width:720px;">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="col-12">
+        <label class="form-label fw-semibold">Bạn muốn đăng gì?</label>
+        <div class="row row-cols-1 row-cols-sm-2 g-2">
+            <div class="col">
+                <div class="card h-100">
+                    <label class="card-body form-check d-flex gap-2 mb-0" for="kind-found" role="button">
+                        <input class="form-check-input mt-1" type="radio" asp-for="Kind" id="kind-found" value="Found" />
+                        <span>
+                            <span class="d-block fw-semibold">Tôi nhặt được đồ</span>
+                            <span class="d-block small text-muted">Mình đang giữ món này</span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card h-100">
+                    <label class="card-body form-check d-flex gap-2 mb-0" for="kind-lost" role="button">
+                        <input class="form-check-input mt-1" type="radio" asp-for="Kind" id="kind-lost" value="Lost" />
+                        <span>
+                            <span class="d-block fw-semibold">Tôi bị mất đồ</span>
+                            <span class="d-block small text-muted">Mình đang tìm món này</span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <label asp-for="Title" class="form-label"></label>
+        <input asp-for="Title" class="form-control" />
+        <span asp-validation-for="Title" class="text-danger"></span>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="CategoryId" class="form-label"></label>
+        <select asp-for="CategoryId" asp-items="Model.Categories" class="form-select">
+            <option value="">-- Chọn --</option>
+        </select>
+        <span asp-validation-for="CategoryId" class="text-danger"></span>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="LocationId" class="form-label"></label>
+        <select asp-for="LocationId" asp-items="Model.Locations" class="form-select">
+            <option value="">-- Chọn --</option>
+        </select>
+        <span asp-validation-for="LocationId" class="text-danger"></span>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="OccurredAt" class="form-label" id="occurred-label">Thời điểm</label>
+        <input asp-for="OccurredAt" type="datetime-local" class="form-control" />
+        <span asp-validation-for="OccurredAt" class="text-danger"></span>
+    </div>
+    <div class="col-12">
+        <label asp-for="Description" class="form-label"></label>
+        <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+    <div class="col-12">
+        <label asp-for="TagsRaw" class="form-label"></label>
+        <input asp-for="TagsRaw" class="form-control" placeholder="ví dụ: balo, laptop" />
+    </div>
+    <div class="col-md-6">
+        <label asp-for="CoverImage" class="form-label"></label>
+        <input asp-for="CoverImage" type="file" class="form-control" accept="image/*" />
+    </div>
+    <div class="col-md-6">
+        <label asp-for="OtherImages" class="form-label"></label>
+        <input asp-for="OtherImages" type="file" class="form-control" accept="image/*" multiple />
+    </div>
+
+    <div class="col-12" id="found-only">
+        <div class="card border-warning">
+            <div class="card-body d-flex flex-column gap-3">
+                <div>
+                    <label class="form-label mb-1">Cách giữ</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" asp-for="HoldingType" id="hold-self" value="SelfHeld" />
+                        <label class="form-check-label" for="hold-self">Tôi tự giữ</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" asp-for="HoldingType" id="hold-cust" value="Custodial" />
+                        <label class="form-check-label" for="hold-cust">Ký gửi cho Staff</label>
+                    </div>
+                </div>
+                <div>
+                    <label asp-for="PrivateMarks" class="form-label">🔒 Đặc điểm nhận dạng riêng (KHÔNG hiển thị công khai)</label>
+                    <textarea asp-for="PrivateMarks" class="form-control" rows="2"
+                              placeholder="Chi tiết chỉ chủ nhân biết — dùng để đối chiếu khi có người nhận."></textarea>
+                    <span asp-validation-for="PrivateMarks" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <button type="submit" class="btn btn-primary">Đăng bài</button>
+        <a asp-action="Index" class="btn btn-link">Huỷ</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // HoldingType + PrivateMarks only exist on the found side; the label wording follows the kind too.
+        (function () {
+            var foundOnly = document.getElementById('found-only');
+            var label = document.getElementById('occurred-label');
+            function sync() {
+                var isFound = document.getElementById('kind-found').checked;
+                foundOnly.classList.toggle('d-none', !isFound);
+                label.textContent = isFound ? 'Thời điểm nhặt được' : 'Thời điểm mất';
+            }
+            document.querySelectorAll('input[name="Kind"]').forEach(function (r) {
+                r.addEventListener('change', sync);
+            });
+            sync();
+        })();
+    </script>
+}

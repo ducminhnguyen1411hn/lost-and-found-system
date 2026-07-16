@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using LostAndFound.Data;
+using LostAndFound.Models.Enums;
 using LostAndFound.Models.ViewModels.LostItems;
 using LostAndFound.Services;
 using LostAndFound.Services.Images;
@@ -23,15 +24,10 @@ public class LostItemsController : Controller
         _db = db;
     }
 
+    // GET /LostItems — replaced by the unified board; keep a permanent redirect for old links/bookmarks.
     [AllowAnonymous]
     [HttpGet]
-    public async Task<IActionResult> Index(LostItemSearchViewModel q)
-    {
-        q.Categories = await BuildCategorySelectAsync(q.CategoryId);
-        q.Locations = await BuildLocationSelectAsync(q.LocationId);
-        q.Results = await _service.SearchAsync(q);
-        return View(q);
-    }
+    public IActionResult Index() => RedirectToActionPermanent("Index", "Items", new { kind = ItemKind.Lost });
 
     [AllowAnonymous]
     [HttpGet]

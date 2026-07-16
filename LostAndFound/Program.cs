@@ -74,6 +74,7 @@ namespace LostAndFound
             builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<INotificationQueries, NotificationService>();
             builder.Services.AddScoped<IClaimService, ClaimService>();
+            builder.Services.AddScoped<IItemBoardService, ItemBoardService>();
 
             var app = builder.Build();
 
@@ -96,7 +97,7 @@ namespace LostAndFound
 
             app.MapControllerRoute(
                 name: "default",
-                pattern: "{controller=FoundItems}/{action=Index}/{id?}");
+                pattern: "{controller=Items}/{action=Index}/{id?}");
             app.MapRazorPages();
 
             await app.RunAsync();

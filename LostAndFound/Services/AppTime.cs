@@ -31,4 +31,17 @@ public static class AppTime
 
     /// <summary>App-local "now" (used for not-in-future checks and form defaults).</summary>
     public static DateTime LocalNow => ToLocal(DateTime.UtcNow);
+
+    /// <summary>Human "độ mới" for list cards: takes a UTC timestamp, compares against local now.
+    /// Cards need recency, not a to-the-minute stamp (that lives on the detail page).</summary>
+    public static string Relative(DateTime utc)
+    {
+        var span = LocalNow - ToLocal(utc);
+        if (span.TotalMinutes < 1) return "vừa xong";
+        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes} phút trước";
+        if (span.TotalHours < 24) return $"{(int)span.TotalHours} giờ trước";
+        if (span.TotalDays < 7) return $"{(int)span.TotalDays} ngày trước";
+        if (span.TotalDays < 30) return $"{(int)(span.TotalDays / 7)} tuần trước";
+        return ToLocal(utc).ToString("dd/MM/yyyy");
+    }
 }
