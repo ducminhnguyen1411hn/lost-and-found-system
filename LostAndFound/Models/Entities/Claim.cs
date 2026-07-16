@@ -25,5 +25,7 @@ public partial class Claim
 
     public virtual ICollection<ClaimImage> ClaimImage { get; set; } = new List<ClaimImage>();
 
+    public virtual ICollection<ClaimMessage> ClaimMessage { get; set; } = new List<ClaimMessage>();
+
     public virtual FoundItem FoundItem { get; set; } = null!;
 }

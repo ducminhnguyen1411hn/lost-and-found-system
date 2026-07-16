@@ -3,6 +3,7 @@ using LostAndFound.Data;
 using LostAndFound.Models.Entities;
 using LostAndFound.Models.Enums;
 using LostAndFound.Models.ViewModels.Claims;
+using LostAndFound.Models.ViewModels.Common;
 using LostAndFound.Services.Images;
 using LostAndFound.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -125,9 +126,15 @@ public class ClaimService : IClaimService
             _db.ClaimImage.Add(new ClaimImage { ClaimId = claim.Id, Url = urls[i], SortOrder = i });
         if (urls.Count > 0) await _db.SaveChangesAsync();
 
-        // Private audit (identifies the claimant) — NEVER public.
+        // Two rows, on purpose:
+        // 1) the private audit-trail record, scoped to the Claim and naming the claimant.
         await _audit.LogAsync(uid, "ClaimSubmitted", "Claim", claim.Id.ToString(),
             null, ClaimStatus.Pending.ToString(), "Gửi yêu cầu nhận lại", isPublic: false);
+        // 2) the public milestone on the ITEM timeline. Actor deliberately empty and no name in the
+        //    detail, so the timeline shows THAT a claim arrived without outing WHO sent it (the "who"
+        //    lives on Claim.ClaimantUserId, visible to the holder only). Same rule as the handover rows.
+        await _audit.LogAsync("", "ClaimSubmitted", "FoundItem", item.Id.ToString(),
+            null, null, "Có người gửi yêu cầu nhận lại", isPublic: true);
 
         // Notify the holder.
         var holderId = (HoldingType)item.HoldingType == HoldingType.SelfHeld ? item.ReporterUserId : item.CustodianStaffId;
@@ -423,11 +430,20 @@ public class ClaimService : IClaimService
         return result;
     }
 
-    public async Task<IReadOnlyList<MyClaimViewModel>> GetMyClaimsAsync(string userId)
+    public async Task<PagedResult<MyClaimViewModel>> GetMyClaimsAsync(string userId, ClaimStatus? status, int page, int pageSize)
     {
-        return await _db.Claim.AsNoTracking()
-            .Where(c => c.ClaimantUserId == userId)
-            .OrderByDescending(c => c.CreatedAt)
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize < 1 ? 10 : Math.Min(pageSize, 50);
+
+        var q = _db.Claim.AsNoTracking().Where(c => c.ClaimantUserId == userId);
+        if (status is ClaimStatus s) q = q.Where(c => c.Status == (int)s);
+
+        var total = await q.CountAsync();
+
+        var items = await q
+            .OrderByDescending(c => c.CreatedAt).ThenByDescending(c => c.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(c => new MyClaimViewModel
             {
                 ClaimId = c.Id,
@@ -445,5 +461,112 @@ public class ClaimService : IClaimService
                     && !c.FoundItem.ClaimantConfirmedHandover
             })
             .ToListAsync();
+
+        return new PagedResult<MyClaimViewModel> { Items = items, Page = page, PageSize = pageSize, TotalCount = total };
+    }
+
+    public async Task<ClaimDetailViewModel?> GetClaimDetailAsync(int claimId, ClaimsPrincipal user)
+    {
+        var uid = Uid(user);
+        if (uid is null) return null;
+
+        var claim = await _db.Claim.AsNoTracking()
+            .Include(c => c.ClaimImage)
+            .FirstOrDefaultAsync(c => c.Id == claimId);
+        if (claim is null) return null;
+
+        var item = await _db.FoundItem.AsNoTracking().FirstOrDefaultAsync(f => f.Id == claim.FoundItemId);
+        if (item is null) return null;
+
+        // Only the claimant, the item's holder, or an Admin. (General staff arbitration = FR-CLAIM-06, deferred.)
+        var isHolder = IsHolderOrAdmin(item, user);
+        var isClaimant = claim.ClaimantUserId == uid;
+        if (!isHolder && !isClaimant) return null;
+
+        var status = (ClaimStatus)claim.Status;
+        var itemStatus = (FoundItemStatus)item.Status;
+        var live = status == ClaimStatus.Pending || status == ClaimStatus.Accepted;
+
+        var msgs = await (
+            from m in _db.ClaimMessage.AsNoTracking()
+            join usr in _db.Users.AsNoTracking() on m.SenderUserId equals usr.Id into mu
+            from usr in mu.DefaultIfEmpty()
+            where m.ClaimId == claimId
+            orderby m.CreatedAt
+            select new ClaimMessageViewModel
+            {
+                Id = m.Id,
+                SenderName = usr != null ? (usr.FullName ?? usr.Email!) : "N/A",
+                Body = m.Body,
+                CreatedAt = m.CreatedAt,
+                IsMine = m.SenderUserId == uid
+            }).ToListAsync();
+
+        return new ClaimDetailViewModel
+        {
+            ClaimId = claim.Id,
+            FoundItemId = item.Id,
+            ItemTitle = item.Title,
+            ItemCoverImage = await _db.FoundItemImage.AsNoTracking()
+                .Where(i => i.FoundItemId == item.Id).OrderBy(i => i.SortOrder).Select(i => i.Url).FirstOrDefaultAsync(),
+            ItemStatus = itemStatus,
+            ClaimantName = await NameOf(claim.ClaimantUserId) ?? "N/A",
+            Status = status,
+            CreatedAt = claim.CreatedAt,
+            RejectReason = claim.RejectReason,
+            VerificationDetails = claim.VerificationDetails,
+            EvidenceImagePaths = claim.ClaimImage.OrderBy(i => i.SortOrder).Select(i => i.Url).ToList(),
+            Messages = msgs,
+            ViewerIsHolder = isHolder,
+            CanPostMessage = live,
+            CanAccept = isHolder && status == ClaimStatus.Pending && itemStatus == FoundItemStatus.Open,
+            CanReject = isHolder && status == ClaimStatus.Pending,
+            CanConfirmReceived = isClaimant && status == ClaimStatus.Accepted
+                                 && itemStatus == FoundItemStatus.ClaimAccepted && !item.ClaimantConfirmedHandover,
+            HolderConfirmed = item.HolderConfirmedHandover,
+            ClaimantConfirmed = item.ClaimantConfirmedHandover
+        };
+    }
+
+    public async Task<bool> PostMessageAsync(int claimId, string body, ClaimsPrincipal user)
+    {
+        var uid = Uid(user);
+        if (uid is null || string.IsNullOrWhiteSpace(body)) return false;
+
+        var claim = await _db.Claim.AsNoTracking().FirstOrDefaultAsync(c => c.Id == claimId);
+        if (claim is null) return false;
+
+        var status = (ClaimStatus)claim.Status;
+        if (status == ClaimStatus.Rejected) return false; // closed claim -> thread is read-only
+
+        var item = await _db.FoundItem.AsNoTracking().FirstOrDefaultAsync(f => f.Id == claim.FoundItemId);
+        if (item is null) return false;
+
+        var isHolder = IsHolderOrAdmin(item, user);
+        var isClaimant = claim.ClaimantUserId == uid;
+        if (!isHolder && !isClaimant) return false;
+
+        var holderId = (HoldingType)item.HoldingType == HoldingType.SelfHeld ? item.ReporterUserId : item.CustodianStaffId;
+        // The counterparty is the OTHER end of this thread.
+        var recipient = isClaimant ? holderId : claim.ClaimantUserId;
+
+        await using var tx = await _db.Database.BeginTransactionAsync();
+
+        _db.ClaimMessage.Add(new ClaimMessage
+        {
+            ClaimId = claimId,
+            SenderUserId = uid,
+            Body = body.Trim()
+            // CreatedAt is store-generated.
+        });
+        await _db.SaveChangesAsync();
+
+        // No AuditLog: a message is not a status change, and the thread itself is the record.
+        if (!string.IsNullOrEmpty(recipient))
+            await _notify.PushAsync(recipient, "ClaimMessage", "Tin nhắn mới về yêu cầu nhận lại",
+                $"Có tin nhắn mới về '{item.Title}'.", $"/Claims/Details/{claimId}");
+
+        await tx.CommitAsync();
+        return true;
     }
 }

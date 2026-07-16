@@ -26,6 +26,14 @@
 - **Verified at runtime:** `/` → 106 = 82 found + 24 lost; `?Kind=Found` → 82; `?Kind=Lost` → 24; page 1 of "Tất cả" genuinely interleaves both kinds; keyword/tag/page filters 200; `/FoundItems`,`/LostItems` → 301; `/Items/Create` anon → 302; old detail pages still 200; type pill renders only on the mixed view (12 vs 0); no `PrivateMarks` in the board HTML.
 - **Easy to get wrong when copying:** the two Open enums (trap 1) and putting a subquery in the union projection (trap 2). Also: `ViewData` does flow into a `<partial>`, so the `ShowKindPill` toggle works — but default it to `true` in the partial so it still renders if invoked from elsewhere.
 
+## B2. Trap found after release — invisible badges (READ THIS BEFORE USING ANY BOOTSTRAP UTILITY)
+- **Symptom:** tags rendered as empty outlined boxes on the board (widths still varied with the text!), the "Nhặt được/Bị mất" pill was nowhere, the "📷 N" badge was a ghost. Details page tags were fine.
+- **Cause:** **this project ships Bootstrap v5.1.0**, and `text-bg-*` only exists from **5.2**. The class silently did nothing, while `.badge` sets `color:#fff` on its own → white text, no background, on a white card = invisible. Details worked because it uses the older `badge bg-secondary`.
+- **Same family, also found:** `object-fit-cover` (5.3+) → images were being **stretched** inside `.ratio-4x3` (`.ratio > *` is forced to 100%/100%); `bg-*-subtle` (5.3+) on card headers → no-op (one of those, in `FoundItems/Details`, predated this work).
+- **Fixes:** `bg-success` / `bg-warning text-dark` / `bg-light text-dark` / `bg-dark` for badges; a one-line `.object-fit-cover { object-fit: cover; }` in `wwwroot/css/site.css` (same name as the future Bootstrap utility, so it's a no-op after an upgrade); `bg-light` + the card's `border-*` colour instead of `*-subtle`. **Bootstrap was NOT upgraded** — the stack is locked in CLAUDE.md.
+- **Rule for next time:** before using any Bootstrap utility, `grep` it in `wwwroot/lib/bootstrap/dist/css/bootstrap.min.css`. A missing utility class fails **silently** — no build error, no console warning, just an invisible element. Assume nothing newer than **5.1**.
+- **Verification trap that cost 10 more minutes:** `grep 'Nhặt được'` on the fetched page returned 0 and looked like a second bug. Razor **HTML-encodes `@expression` output to numeric entities** (`ặ` → `&#x1EB7;`) while **literal template text stays raw UTF-8** — which is why `grep 'kết quả'` matched but `grep 'Nhặt được'` didn't. When curl-verifying, grep the class names, not the Vietnamese display strings.
+
 ## C. Follow-ups
 - Old `FoundItemService.SearchAsync` / `LostItemService.SearchAsync` are now unused (the board no longer calls them). Left in place deliberately — deleting them was out of scope. Remove them if nothing else picks them up.
 - Sort is fixed to newest-first; the wireframe shows a "Sắp xếp" control that isn't wired yet.

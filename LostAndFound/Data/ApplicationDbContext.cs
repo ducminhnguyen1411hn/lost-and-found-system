@@ -35,6 +35,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<FoundItemTag> FoundItemTag => Set<FoundItemTag>();
     public DbSet<Claim> Claim => Set<Claim>();
     public DbSet<ClaimImage> ClaimImage => Set<ClaimImage>();
+    public DbSet<ClaimMessage> ClaimMessage => Set<ClaimMessage>();
     public DbSet<CameraCheckRequest> CameraCheckRequest => Set<CameraCheckRequest>();
     public DbSet<ThankYou> ThankYou => Set<ThankYou>();
     public DbSet<Notification> Notification => Set<Notification>();
@@ -121,6 +122,17 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.Url).HasMaxLength(400);
 
             entity.HasOne(d => d.Claim).WithMany(p => p.ClaimImage).HasForeignKey(d => d.ClaimId);
+        });
+
+        modelBuilder.Entity<ClaimMessage>(entity =>
+        {
+            entity.HasIndex(e => e.ClaimId, "IX_ClaimMessage_ClaimId");
+
+            entity.Property(e => e.Body).HasMaxLength(2000);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.SenderUserId).HasMaxLength(450);
+
+            entity.HasOne(d => d.Claim).WithMany(p => p.ClaimMessage).HasForeignKey(d => d.ClaimId);
         });
 
         modelBuilder.Entity<FoundItem>(entity =>

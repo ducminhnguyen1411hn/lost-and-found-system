@@ -13,7 +13,9 @@
 @if (Model.IsHolderView && Model.PendingClaims.Count > 0)
 {
     <div class="card border-primary mt-3">
-        <div class="card-header bg-primary-subtle">Yêu cầu nhận lại đang chờ (@Model.PendingClaims.Count)</div>
+        @* bg-*-subtle utilities are Bootstrap 5.3; this project is on 5.1 (they rendered as no-ops).
+           bg-light + the card's border-* colour carries the same distinction on 5.1. *@
+        <div class="card-header bg-light">Yêu cầu nhận lại đang chờ (@Model.PendingClaims.Count)</div>
         <div class="card-body">
             @foreach (var c in Model.PendingClaims)
             {
@@ -33,6 +35,8 @@
                         </div>
                     }
                     <div class="d-flex gap-2">
+                        <a asp-controller="Claims" asp-action="Details" asp-route-id="@c.ClaimId"
+                           class="btn btn-outline-primary btn-sm">Trao đổi</a>
                         <form asp-controller="Claims" asp-action="Accept" method="post"
                               onsubmit="return confirm('Chấp nhận yêu cầu này? Các yêu cầu khác trên món đồ sẽ tự động bị từ chối.');">
                             @Html.AntiForgeryToken()
@@ -58,7 +62,7 @@
 @if (Model.Status == FoundItemStatus.ClaimAccepted && (Model.ShowHolderHandover || Model.ShowClaimantHandover))
 {
     <div class="card border-success mt-3">
-        <div class="card-header bg-success-subtle">Bàn giao 2 chiều</div>
+        <div class="card-header bg-light">Bàn giao 2 chiều</div>
         <div class="card-body">
             <p class="mb-2 small">
                 Người giữ xác nhận bàn giao: @(Model.HolderConfirmed ? "✅" : "⏳") ·

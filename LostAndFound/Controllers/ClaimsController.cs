@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using LostAndFound.Models.Enums;
 using LostAndFound.Models.ViewModels.Claims;
 using LostAndFound.Services.Images;
 using LostAndFound.Services.Interfaces;
@@ -60,10 +61,27 @@ public class ClaimsController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> My()
+    public async Task<IActionResult> My(MyClaimsSearchViewModel q)
     {
-        var items = await _claims.GetMyClaimsAsync(Uid);
-        return View(items);
+        q.Results = await _claims.GetMyClaimsAsync(Uid, q.Status, q.Page, q.PageSize);
+        return View(q);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Details(int id)
+    {
+        var vm = await _claims.GetClaimDetailAsync(id, User);
+        if (vm is null) return NotFound();
+        return View(vm);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> PostMessage(int id, string newMessage)
+    {
+        var ok = await _claims.PostMessageAsync(id, newMessage ?? string.Empty, User);
+        if (!ok) TempData["SuccessMessage"] = "Không gửi được tin nhắn.";
+        return RedirectToAction(nameof(Details), new { id });
     }
 
     [HttpPost]

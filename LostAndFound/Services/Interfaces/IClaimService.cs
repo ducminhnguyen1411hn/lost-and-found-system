@@ -1,5 +1,7 @@
 using System.Security.Claims;
+using LostAndFound.Models.Enums;
 using LostAndFound.Models.ViewModels.Claims;
+using LostAndFound.Models.ViewModels.Common;
 
 namespace LostAndFound.Services.Interfaces;
 
@@ -18,5 +20,11 @@ public interface IClaimService
     Task<bool> CancelAcceptanceAsync(int foundItemId, ClaimsPrincipal user);  // holder side
 
     Task<ItemClaimPanelViewModel> GetItemClaimPanelAsync(int foundItemId, ClaimsPrincipal user);
-    Task<IReadOnlyList<MyClaimViewModel>> GetMyClaimsAsync(string userId);
+    Task<PagedResult<MyClaimViewModel>> GetMyClaimsAsync(string userId, ClaimStatus? status, int page, int pageSize);
+
+    /// <summary>The claim page for the claimant / item holder / Admin. Null for anyone else (404).</summary>
+    Task<ClaimDetailViewModel?> GetClaimDetailAsync(int claimId, ClaimsPrincipal user);
+
+    /// <summary>Post one message to the claim thread; notifies the counterparty. False if not allowed.</summary>
+    Task<bool> PostMessageAsync(int claimId, string body, ClaimsPrincipal user);
 }

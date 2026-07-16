@@ -438,6 +438,25 @@ BEGIN
 END
 GO
 
+-- ClaimMessage: the private conversation between the item's holder and one claimant, scoped to a Claim.
+-- Exists so the holder can VERIFY a claimant by asking something only the owner would know, and so the two
+-- can arrange the handover WITHOUT exchanging phone numbers. Readable only by that claimant, the item's
+-- holder, and Admin — never public, never on the timeline. Cascade-deletes with its claim.
+IF OBJECT_ID(N'dbo.ClaimMessage', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ClaimMessage (
+        Id           int            NOT NULL IDENTITY(1,1) CONSTRAINT PK_ClaimMessage PRIMARY KEY,
+        ClaimId      int            NOT NULL,
+        SenderUserId nvarchar(450)  NOT NULL,
+        Body         nvarchar(2000) NOT NULL,
+        CreatedAt    datetime2      NOT NULL CONSTRAINT DF_ClaimMessage_CreatedAt DEFAULT (SYSUTCDATETIME()),
+        CONSTRAINT FK_ClaimMessage_Claim_ClaimId            FOREIGN KEY (ClaimId)      REFERENCES dbo.Claim (Id)       ON DELETE CASCADE,
+        CONSTRAINT FK_ClaimMessage_AspNetUsers_SenderUserId FOREIGN KEY (SenderUserId) REFERENCES dbo.AspNetUsers (Id) ON DELETE NO ACTION
+    );
+    CREATE INDEX IX_ClaimMessage_ClaimId ON dbo.ClaimMessage (ClaimId);
+END
+GO
+
 -- CameraCheckRequest: a request for staff to review camera footage. Status int enum.
 IF OBJECT_ID(N'dbo.CameraCheckRequest', N'U') IS NULL
 BEGIN
