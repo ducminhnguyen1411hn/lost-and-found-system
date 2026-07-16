@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using LostAndFound.Models;
+using LostAndFound.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -24,11 +25,28 @@ namespace LostAndFound.Areas.Identity.Pages.Account
 
         public class InputModel
         {
-            [Required][EmailAddress] public string Email { get; set; }
-            [Required][StringLength(100, MinimumLength = 6)][DataType(DataType.Password)] public string Password { get; set; }
-            [DataType(DataType.Password)][Compare("Password")] public string ConfirmPassword { get; set; }
-            [Required] public string FullName { get; set; }
-            [Phone] public string PhoneNumber { get; set; }
+            [Required][EmailAddress]
+            [Display(Name = "Email")]
+            public string Email { get; set; }
+
+            [Required][StringLength(100, MinimumLength = 6)]
+            [DataType(DataType.Password)]
+            [Display(Name = "Mật khẩu")]
+            public string Password { get; set; }
+
+            [DataType(DataType.Password)]
+            [Display(Name = "Xác nhận mật khẩu")]
+            [Compare("Password", ErrorMessage = "Mật khẩu và xác nhận mật khẩu không khớp.")]
+            public string ConfirmPassword { get; set; }
+
+            [Required][StringLength(200)]
+            [Display(Name = "Họ và tên")]
+            public string FullName { get; set; }
+
+            [Required][StringLength(20)]
+            [Display(Name = "Số điện thoại")]
+            [Phone]
+            public string PhoneNumber { get; set; }
         }
 
         public void OnGet(string returnUrl = null) => ReturnUrl = returnUrl;
