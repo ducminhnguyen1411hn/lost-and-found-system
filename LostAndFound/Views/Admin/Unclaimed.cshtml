@@ -1,0 +1,83 @@
+@model List<LostAndFound.Models.ViewModels.Admin.UnclaimedItemViewModel>
+@{
+    ViewData["Title"] = "Unclaimed Items";
+}
+
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-1 text-dark">Unclaimed Items</h3>
+            <p class="text-muted mb-0">Items that have been unclaimed for extended periods</p>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show mb-4 border-0" role="alert" style="background-color: #dcfce7; color: #166534; border-radius: 6px;">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show mb-4 border-0" role="alert" style="background-color: #fee2e2; color: #991b1b; border-radius: 6px;">
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="card border-0 shadow-sm" style="border-radius: 8px;">
+            <div class="card-body text-center py-5">
+                <div class="text-muted mb-3">
+                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                </div>
+                <h5 class="fw-bold text-dark">No Unclaimed Items</h5>
+                <p class="text-muted">There are currently no items in the unclaimed status.</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle" style="border-top: 1px solid #e5e7eb;">
+                <thead>
+                    <tr class="text-muted" style="font-size: 0.9rem;">
+                        <th class="fw-normal border-0 border-bottom pb-3">Item</th>
+                        <th class="fw-normal border-0 border-bottom pb-3">Category</th>
+                        <th class="fw-normal border-0 border-bottom pb-3">Location</th>
+                        <th class="fw-normal border-0 border-bottom pb-3">Found Date</th>
+                        <th class="fw-normal border-0 border-bottom pb-3">Days Unclaimed</th>
+                        <th class="fw-normal border-0 border-bottom pb-3">Reporter</th>
+                        <th class="fw-normal border-0 border-bottom pb-3 text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody style="font-size: 0.95rem;">
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="py-3 border-bottom fw-medium text-dark">@item.Title</td>
+                            <td class="py-3 border-bottom">@item.CategoryName</td>
+                            <td class="py-3 border-bottom">@item.LocationName</td>
+                            <td class="py-3 border-bottom text-muted" style="font-size: 0.9rem;">@item.FoundAt.ToString("MM/dd/yyyy")</td>
+                            <td class="py-3 border-bottom">
+                                <span class="badge @(item.DaysUnclaimed > 60 ? "bg-danger" : (item.DaysUnclaimed > 30 ? "bg-warning" : "bg-info"))" style="border-radius: 4px;">
+                                    @item.DaysUnclaimed days
+                                </span>
+                            </td>
+                            <td class="py-3 border-bottom">@item.ReporterName</td>
+                            <td class="py-3 border-bottom text-end">
+                                <form asp-action="DisposeItem" asp-route-id="@item.Id" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to mark this item as disposed? This action cannot be undone.');">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-outline-danger px-3" style="border-radius: 6px; font-weight: 500;">Dispose</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

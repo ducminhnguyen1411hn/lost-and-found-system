@@ -1,0 +1,622 @@
+using LostAndFound.Data;
+using LostAndFound.Models.Entities;
+using LostAndFound.Models.Enums;
+using LostAndFound.Models.ViewModels.Admin;
+using LostAndFound.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
+
+namespace LostAndFound.Services;
+
+public class AdminService : IAdminService
+{
+    private readonly ApplicationDbContext _db;
+    private readonly IAuditService _auditService;
+
+    public AdminService(ApplicationDbContext db, IAuditService auditService)
+    {
+        _db = db;
+        _auditService = auditService;
+    }
+
+    #region Category Management
+
+    public async Task<List<CategoryViewModel>> GetAllCategoriesAsync()
+    {
+        var categories = await _db.Category
+            .Include(c => c.InverseParent)
+            .Include(c => c.FoundItem)
+            .OrderBy(c => c.Name)
+            .ToListAsync();
+
+        return categories.Select(c => new CategoryViewModel
+        {
+            Id = c.Id,
+            Name = c.Name,
+            ParentId = c.ParentId,
+            ParentName = c.Parent?.Name,
+            HasChildren = c.InverseParent.Any(),
+            ItemCount = c.FoundItem.Count
+        }).ToList();
+    }
+
+    public async Task<CategoryViewModel?> GetCategoryByIdAsync(int id)
+    {
+        var category = await _db.Category
+            .Include(c => c.Parent)
+            .Include(c => c.InverseParent)
+            .Include(c => c.FoundItem)
+            .FirstOrDefaultAsync(c => c.Id == id);
+
+        if (category == null) return null;
+
+        return new CategoryViewModel
+        {
+            Id = category.Id,
+            Name = category.Name,
+            ParentId = category.ParentId,
+            ParentName = category.Parent?.Name,
+            HasChildren = category.InverseParent.Any(),
+            ItemCount = category.FoundItem.Count
+        };
+    }
+
+    public async Task<CategoryCreateViewModel> GetCategoryCreateViewModelAsync()
+    {
+        var parentCategories = await _db.Category
+            .Where(c => c.ParentId == null)
+            .OrderBy(c => c.Name)
+            .ToListAsync();
+
+        return new CategoryCreateViewModel
+        {
+            // ParentId will be set by the user via dropdown
+        };
+    }
+
+    public async Task<CategoryEditViewModel?> GetCategoryEditViewModelAsync(int id)
+    {
+        var category = await _db.Category
+            .Include(c => c.Parent)
+            .Include(c => c.InverseParent)
+            .FirstOrDefaultAsync(c => c.Id == id);
+
+        if (category == null) return null;
+
+        return new CategoryEditViewModel
+        {
+            Id = category.Id,
+            Name = category.Name,
+            ParentId = category.ParentId,
+            ParentName = category.Parent?.Name,
+            HasChildren = category.InverseParent.Any()
+        };
+    }
+
+    public async Task<int> CreateCategoryAsync(CategoryCreateViewModel model, string actorUserId)
+    {
+        // Validate ParentId exists if provided
+        if (model.ParentId.HasValue)
+        {
+            var parentExists = await _db.Category.AnyAsync(c => c.Id == model.ParentId.Value);
+            if (!parentExists)
+                throw new ArgumentException("Parent category not found");
+        }
+
+        var category = new Category
+        {
+            Name = model.Name,
+            ParentId = model.ParentId
+        };
+
+        _db.Category.Add(category);
+        await _db.SaveChangesAsync();
+
+        await _auditService.LogAsync(actorUserId, "Category", category.Id.ToString(),
+            "Created", null, null, $"Created category: {category.Name}", isPublic: false);
+
+        return category.Id;
+    }
+
+    public async Task<bool> UpdateCategoryAsync(CategoryEditViewModel model, string actorUserId)
+    {
+        var category = await _db.Category
+            .Include(c => c.InverseParent)
+            .FirstOrDefaultAsync(c => c.Id == model.Id);
+
+        if (category == null) return false;
+
+        // Prevent circular reference
+        if (model.ParentId.HasValue && model.ParentId.Value == model.Id)
+            throw new ArgumentException("Category cannot be its own parent");
+
+        // Prevent moving a parent under its own child
+        if (model.ParentId.HasValue)
+        {
+            var isDescendant = IsDescendant(model.ParentId.Value, model.Id);
+            if (isDescendant)
+                throw new ArgumentException("Cannot move category under its own descendant");
+        }
+
+        var oldName = category.Name;
+        var oldParentId = category.ParentId;
+
+        category.Name = model.Name;
+        category.ParentId = model.ParentId;
+
+        await _db.SaveChangesAsync();
+
+        await _auditService.LogAsync(actorUserId, "Category", category.Id.ToString(),
+            "Updated", null, null,
+            $"Updated category: {oldName} -> {category.Name}, Parent: {oldParentId} -> {category.ParentId}", isPublic: false);
+
+        return true;
+    }
+
+    public async Task<bool> DeleteCategoryAsync(int id, string actorUserId)
+    {
+        var category = await _db.Category
+            .Include(c => c.InverseParent)
+            .Include(c => c.FoundItem)
+            .FirstOrDefaultAsync(c => c.Id == id);
+
+        if (category == null) return false;
+
+        // Prevent deletion if has children
+        if (category.InverseParent.Any())
+            throw new ArgumentException("Cannot delete category with child categories");
+
+        // Prevent deletion if has items
+        if (category.FoundItem.Any())
+            throw new ArgumentException("Cannot delete category with associated items");
+
+        var categoryName = category.Name;
+        _db.Category.Remove(category);
+        await _db.SaveChangesAsync();
+
+        await _auditService.LogAsync(actorUserId, "Category", id.ToString(),
+            "Deleted", null, null, $"Deleted category: {categoryName}", isPublic: false);
+
+        return true;
+    }
+
+    private bool IsDescendant(int potentialParentId, int categoryId)
+    {
+        var child = _db.Category.Find(categoryId);
+        if (child == null) return false;
+
+        var currentParentId = child.ParentId;
+        while (currentParentId.HasValue)
+        {
+            if (currentParentId.Value == potentialParentId) return true;
+            var parent = _db.Category.Find(currentParentId.Value);
+            if (parent == null) break;
+            currentParentId = parent.ParentId;
+        }
+
+        return false;
+    }
+
+    #endregion
+
+    #region Location Management
+
+    public async Task<List<LocationViewModel>> GetAllLocationsAsync()
+    {
+        var locations = await _db.Location
+            .Include(l => l.FoundItem)
+            .OrderBy(l => l.Building)
+            .ThenBy(l => l.Name)
+            .ToListAsync();
+
+        return locations.Select(l => new LocationViewModel
+        {
+            Id = l.Id,
+            Building = l.Building,
+            Name = l.Name,
+            ItemCount = l.FoundItem.Count
+        }).ToList();
+    }
+
+    public async Task<LocationViewModel?> GetLocationByIdAsync(int id)
+    {
+        var location = await _db.Location
+            .Include(l => l.FoundItem)
+            .FirstOrDefaultAsync(l => l.Id == id);
+
+        if (location == null) return null;
+
+        return new LocationViewModel
+        {
+            Id = location.Id,
+            Building = location.Building,
+            Name = location.Name,
+            ItemCount = location.FoundItem.Count
+        };
+    }
+
+    public async Task<LocationCreateViewModel> GetLocationCreateViewModelAsync()
+    {
+        return new LocationCreateViewModel();
+    }
+
+    public async Task<LocationEditViewModel?> GetLocationEditViewModelAsync(int id)
+    {
+        var location = await _db.Location.FindAsync(id);
+        if (location == null) return null;
+
+        return new LocationEditViewModel
+        {
+            Id = location.Id,
+            Building = location.Building,
+            Name = location.Name
+        };
+    }
+
+    public async Task<int> CreateLocationAsync(LocationCreateViewModel model, string actorUserId)
+    {
+        var location = new Location
+        {
+            Building = model.Building,
+            Name = model.Name
+        };
+
+        _db.Location.Add(location);
+        await _db.SaveChangesAsync();
+
+        await _auditService.LogAsync(actorUserId, "Location", location.Id.ToString(),
+            "Created", null, null, $"Created location: {location.Name}", isPublic: false);
+
+        return location.Id;
+    }
+
+    public async Task<bool> UpdateLocationAsync(LocationEditViewModel model, string actorUserId)
+    {
+        var location = await _db.Location.FindAsync(model.Id);
+        if (location == null) return false;
+
+        var oldName = location.Name;
+        var oldBuilding = location.Building;
+
+        location.Building = model.Building;
+        location.Name = model.Name;
+
+        await _db.SaveChangesAsync();
+
+        await _auditService.LogAsync(actorUserId, "Location", location.Id.ToString(),
+            "Updated", null, null,
+            $"Updated location: {oldBuilding} {oldName} -> {location.Building} {location.Name}", isPublic: false);
+
+        return true;
+    }
+
+    public async Task<bool> DeleteLocationAsync(int id, string actorUserId)
+    {
+        var location = await _db.Location
+            .Include(l => l.FoundItem)
+            .FirstOrDefaultAsync(l => l.Id == id);
+
+        if (location == null) return false;
+
+        // Prevent deletion if has items
+        if (location.FoundItem.Any())
+            throw new ArgumentException("Cannot delete location with associated items");
+
+        var locationName = location.Name;
+        _db.Location.Remove(location);
+        await _db.SaveChangesAsync();
+
+        await _auditService.LogAsync(actorUserId, "Location", id.ToString(),
+            "Deleted", null, null, $"Deleted location: {locationName}", isPublic: false);
+
+        return true;
+    }
+
+    #endregion
+
+    #region Tag Management
+
+    public async Task<List<TagManagementViewModel>> GetAllTagsAsync()
+    {
+        var tags = await _db.Tag
+            .Include(t => t.FoundItemTag)
+            .OrderBy(t => t.DisplayTag)
+            .ToListAsync();
+
+        return tags.Select(t => new TagManagementViewModel
+        {
+            Id = t.Id,
+            DisplayTag = t.DisplayTag,
+            NormalizedTag = t.NormalizedTag,
+            UsageCount = t.FoundItemTag.Count
+        }).ToList();
+    }
+
+    public async Task<bool> MergeTagsAsync(int sourceTagId, int targetTagId, string actorUserId)
+    {
+        if (sourceTagId == targetTagId)
+            throw new ArgumentException("Cannot merge tag with itself");
+
+        var sourceTag = await _db.Tag
+            .Include(t => t.FoundItemTag)
+            .FirstOrDefaultAsync(t => t.Id == sourceTagId);
+
+        var targetTag = await _db.Tag.FindAsync(targetTagId);
+
+        if (sourceTag == null || targetTag == null)
+            throw new ArgumentException("One or both tags not found");
+
+        // Migrate all FoundItemTag references
+        var itemTags = await _db.FoundItemTag
+            .Where(ft => ft.TagId == sourceTagId)
+            .ToListAsync();
+
+        foreach (var itemTag in itemTags)
+        {
+            // Check if the item already has the target tag
+            var existing = await _db.FoundItemTag
+                .FirstOrDefaultAsync(ft => ft.FoundItemId == itemTag.FoundItemId && ft.TagId == targetTagId);
+
+            if (existing == null)
+            {
+                itemTag.TagId = targetTagId;
+            }
+            else
+            {
+                // Duplicate, remove the source reference
+                _db.FoundItemTag.Remove(itemTag);
+            }
+        }
+
+        // Also migrate LostAlertTag references
+        var alertTags = await _db.LostAlertTag
+            .Where(lt => lt.TagId == sourceTagId)
+            .ToListAsync();
+
+        foreach (var alertTag in alertTags)
+        {
+            var existing = await _db.LostAlertTag
+                .FirstOrDefaultAsync(lt => lt.LostAlertId == alertTag.LostAlertId && lt.TagId == targetTagId);
+
+            if (existing == null)
+            {
+                alertTag.TagId = targetTagId;
+            }
+            else
+            {
+                _db.LostAlertTag.Remove(alertTag);
+            }
+        }
+
+        var sourceTagName = sourceTag.DisplayTag;
+        var targetTagName = targetTag.DisplayTag;
+
+        _db.Tag.Remove(sourceTag);
+        await _db.SaveChangesAsync();
+
+        await _auditService.LogAsync(actorUserId, "Tag", sourceTagId.ToString(),
+            "Merged", null, null,
+            $"Merged tag '{sourceTagName}' into '{targetTagName}'", isPublic: false);
+
+        return true;
+    }
+
+    public async Task<bool> DeleteUnusedTagsAsync(string actorUserId)
+    {
+        var unusedTags = await _db.Tag
+            .Include(t => t.FoundItemTag)
+            .Include(t => t.LostAlertTag)
+            .Where(t => !t.FoundItemTag.Any() && !t.LostAlertTag.Any())
+            .ToListAsync();
+
+        if (!unusedTags.Any()) return false;
+
+        var count = unusedTags.Count;
+        _db.Tag.RemoveRange(unusedTags);
+        await _db.SaveChangesAsync();
+
+        await _auditService.LogAsync(actorUserId, "Tag", "bulk",
+            "Deleted", null, null, $"Deleted {count} unused tags", isPublic: false);
+
+        return true;
+    }
+
+    #endregion
+
+    #region Unclaimed Items Management
+
+    public async Task<List<UnclaimedItemViewModel>> GetUnclaimedItemsAsync()
+    {
+        var unclaimedStatus = (int)FoundItemStatus.Unclaimed;
+
+        var items = await _db.FoundItem
+            .Include(f => f.Category)
+            .Include(f => f.Location)
+            .Include(f => f.ReporterUser)
+            .Where(f => f.Status == unclaimedStatus)
+            .OrderBy(f => f.CreatedAt)
+            .ToListAsync();
+
+        return items.Select(item => new UnclaimedItemViewModel
+        {
+            Id = item.Id,
+            Title = item.Title,
+            CategoryName = item.Category.Name,
+            LocationName = item.Location.Name,
+            Status = (FoundItemStatus)item.Status,
+            FoundAt = item.FoundAt,
+            DaysUnclaimed = (int)(DateTime.UtcNow - item.CreatedAt).TotalDays,
+            ReporterName = item.ReporterUser.FullName ?? item.ReporterUser.Email ?? "Unknown"
+        }).ToList();
+    }
+
+    public async Task<bool> DisposeItemAsync(int itemId, string actorUserId)
+    {
+        var item = await _db.FoundItem.FindAsync(itemId);
+        if (item == null) return false;
+
+        var oldStatus = item.Status;
+        item.Status = (int)FoundItemStatus.Disposed;
+
+        await _db.SaveChangesAsync();
+
+        await _auditService.LogAsync(actorUserId, "FoundItem", itemId.ToString(),
+            "Disposed", oldStatus.ToString(), item.Status.ToString(),
+            $"Item disposed: {item.Title}", isPublic: false);
+
+        return true;
+    }
+
+    #endregion
+
+    #region Dashboard
+
+    public async Task<DashboardViewModel> GetDashboardAsync()
+    {
+        var totalItems = await _db.FoundItem.CountAsync();
+        var returnedStatus = (int)FoundItemStatus.Returned;
+        var returnedItems = await _db.FoundItem
+            .Where(f => f.Status == returnedStatus)
+            .CountAsync();
+
+        var returnRate = totalItems > 0 ? (double)returnedItems / totalItems * 100 : 0;
+
+        // Calculate average return time
+        var returnedItemsWithData = await _db.FoundItem
+            .Include(f => f.Claim)
+            .Where(f => f.Status == returnedStatus)
+            .Select(f => new
+            {
+                f.CreatedAt,
+                HandledAt = f.Claim.FirstOrDefault(c => c.Status == (int)ClaimStatus.Accepted)!.HandledAt
+            })
+            .ToListAsync();
+
+        double avgReturnDays = 0;
+        if (returnedItemsWithData.Any())
+        {
+            var totalDays = returnedItemsWithData
+                .Where(x => x.HandledAt.HasValue)
+                .Sum(x => (x.HandledAt!.Value - x.CreatedAt).TotalDays);
+            avgReturnDays = totalDays / returnedItemsWithData.Count;
+        }
+
+        // Longest unclaimed item
+        var unclaimedStatus = (int)FoundItemStatus.Unclaimed;
+        var longestUnclaimed = await _db.FoundItem
+            .Where(f => f.Status == unclaimedStatus)
+            .OrderBy(f => f.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        var longestUnclaimedDays = longestUnclaimed != null
+            ? (int)(DateTime.UtcNow - longestUnclaimed.CreatedAt).TotalDays
+            : 0;
+
+        // Top finders
+        var topFinders = await _db.FoundItem
+            .GroupBy(f => f.ReporterUserId)
+            .Select(g => new TopFinderViewModel
+            {
+                UserId = g.Key,
+                ItemsFound = g.Count()
+            })
+            .OrderByDescending(f => f.ItemsFound)
+            .Take(5)
+            .ToListAsync();
+
+        // Fill in user names
+        foreach (var finder in topFinders)
+        {
+            var user = await _db.Users.FindAsync(finder.UserId);
+            finder.FullName = user?.FullName ?? user?.Email ?? "Unknown";
+        }
+
+        // Recent activities
+        var recentActivities = await _db.AuditLog
+            .Include(a => a.ActorUser)
+            .OrderByDescending(a => a.CreatedAt)
+            .Take(10)
+            .Select(a => new RecentActivityViewModel
+            {
+                Action = a.Action,
+                EntityType = a.EntityType,
+                EntityId = a.EntityId,
+                ActorName = a.ActorUser != null ? (a.ActorUser.FullName ?? a.ActorUser.Email ?? "Unknown") : "System",
+                CreatedAt = a.CreatedAt
+            })
+            .ToListAsync();
+
+        return new DashboardViewModel
+        {
+            TotalFoundItems = totalItems,
+            ReturnedItems = returnedItems,
+            ReturnRate = Math.Round(returnRate, 2),
+            AverageReturnDays = Math.Round(avgReturnDays, 2),
+            LongestUnclaimedDays = longestUnclaimedDays,
+            TopFinders = topFinders,
+            RecentActivities = recentActivities
+        };
+    }
+
+    #endregion
+
+    #region Audit Log
+
+    public async Task<List<AuditLogViewModel>> GetAuditLogsAsync(AuditLogFilterViewModel filter)
+    {
+        var query = _db.AuditLog
+            .Include(a => a.ActorUser)
+            .AsQueryable();
+
+        if (!string.IsNullOrEmpty(filter.ActorUserId))
+        {
+            query = query.Where(a => a.ActorUserId == filter.ActorUserId);
+        }
+
+        if (!string.IsNullOrEmpty(filter.EntityType))
+        {
+            query = query.Where(a => a.EntityType == filter.EntityType);
+        }
+
+        if (!string.IsNullOrEmpty(filter.Action))
+        {
+            query = query.Where(a => a.Action == filter.Action);
+        }
+
+        if (filter.FromDate.HasValue)
+        {
+            query = query.Where(a => a.CreatedAt >= filter.FromDate.Value);
+        }
+
+        if (filter.ToDate.HasValue)
+        {
+            query = query.Where(a => a.CreatedAt <= filter.ToDate.Value);
+        }
+
+        if (filter.IsPublic.HasValue)
+        {
+            query = query.Where(a => a.IsPublic == filter.IsPublic.Value);
+        }
+
+        return await query
+            .OrderByDescending(a => a.CreatedAt)
+            .Select(a => new AuditLogViewModel
+            {
+                Id = a.Id,
+                ActorUserId = a.ActorUserId,
+                ActorName = a.ActorUser != null ? (a.ActorUser.FullName ?? a.ActorUser.Email ?? "Unknown") : "System",
+                Action = a.Action,
+                EntityType = a.EntityType,
+                EntityId = a.EntityId,
+                FromStatus = a.FromStatus,
+                ToStatus = a.ToStatus,
+                Detail = a.Detail,
+                IsPublic = a.IsPublic,
+                CreatedAt = a.CreatedAt,
+                IpAddress = a.IpAddress
+            })
+            .Take(100)
+            .ToListAsync();
+    }
+
+    #endregion
+}

@@ -1,0 +1,149 @@
+@model List<LostAndFound.Models.ViewModels.Admin.TagManagementViewModel>
+@{
+    ViewData["Title"] = "Tag Management";
+}
+
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-1 text-dark">Tag Management</h3>
+            <p class="text-muted mb-0">Manage and clean up tags</p>
+        </div>
+        <div>
+            <form asp-action="CleanupUnusedTags" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete all unused tags?');">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-warning" style="border-radius: 6px;">
+                    <i class="bi bi-trash me-1"></i> Cleanup Unused Tags
+                </button>
+            </form>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show mb-4 border-0" role="alert" style="background-color: #dcfce7; color: #166534; border-radius: 6px;">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["InfoMessage"] != null)
+    {
+        <div class="alert alert-info alert-dismissible fade show mb-4 border-0" role="alert" style="background-color: #e0f2fe; color: #0369a1; border-radius: 6px;">
+            @TempData["InfoMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show mb-4 border-0" role="alert" style="background-color: #fee2e2; color: #991b1b; border-radius: 6px;">
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="card border-0 shadow-sm" style="border-radius: 8px;">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0" style="border-top: 1px solid #e5e7eb;">
+                    <thead>
+                        <tr class="text-muted" style="font-size: 0.9rem;">
+                            <th class="fw-normal border-0 border-bottom pb-3">Display Tag</th>
+                            <th class="fw-normal border-0 border-bottom pb-3">Normalized Tag</th>
+                            <th class="fw-normal border-0 border-bottom pb-3">Usage Count</th>
+                            <th class="fw-normal border-0 border-bottom pb-3 text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody style="font-size: 0.95rem;">
+                        @foreach (var tag in Model)
+                        {
+                            <tr>
+                                <td class="py-3 border-bottom fw-medium text-dark">@tag.DisplayTag</td>
+                                <td class="py-3 border-bottom">
+                                    <code class="small text-muted">@tag.NormalizedTag</code>
+                                </td>
+                                <td class="py-3 border-bottom">
+                                    <span class="badge @(tag.UsageCount > 0 ? "bg-primary" : "bg-secondary")" style="border-radius: 4px;">@tag.UsageCount</span>
+                                </td>
+                                <td class="py-3 border-bottom text-end">
+                                    @if (tag.UsageCount == 0)
+                                    {
+                                        <span class="text-muted small">Unused</span>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-primary px-3" style="border-radius: 6px; font-weight: 500;"
+                                                data-bs-toggle="modal" data-bs-target="#mergeModal"
+                                                data-source-id="@tag.Id" data-source-name="@tag.DisplayTag">
+                                            Merge
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Merge Modal -->
+<div class="modal fade" id="mergeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius: 8px;">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Merge Tags</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form asp-action="MergeTags" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="sourceTagId" name="sourceTagId" />
+
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Source Tag (to be merged)</label>
+                        <input type="text" id="sourceTagName" class="form-control" style="border-radius: 6px;" readonly />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="targetTagId" class="form-label fw-medium">Target Tag (merge into)</label>
+                        <select id="targetTagId" name="targetTagId" class="form-select" style="border-radius: 6px;" required>
+                            <option value="">Select target tag...</option>
+                            @foreach (var tag in Model.Where(t => t.UsageCount > 0))
+                            {
+                                <option value="@tag.Id">@tag.DisplayTag (@tag.UsageCount items)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="alert alert-warning border-0" style="background-color: #fef3c7; color: #92400e; border-radius: 6px;">
+                        <small>All items using the source tag will be updated to use the target tag. The source tag will be deleted.</small>
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius: 6px;">Cancel</button>
+                        <button type="submit" class="btn btn-primary" style="border-radius: 6px;">Merge Tags</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const mergeModal = document.getElementById('mergeModal');
+            mergeModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const sourceId = button.getAttribute('data-source-id');
+                const sourceName = button.getAttribute('data-source-name');
+
+                document.getElementById('sourceTagId').value = sourceId;
+                document.getElementById('sourceTagName').value = sourceName;
+            });
+        });
+    </script>
+}

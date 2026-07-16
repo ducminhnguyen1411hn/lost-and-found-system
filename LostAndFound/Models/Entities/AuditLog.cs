@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using LostAndFound.Models;
 
 namespace LostAndFound.Models.Entities;
 
@@ -26,4 +27,7 @@ public partial class AuditLog
     public DateTime CreatedAt { get; set; }
 
     public string? IpAddress { get; set; }
+
+    // Navigation property (added manually, not in scaffold)
+    public virtual ApplicationUser? ActorUser { get; set; }
 }
