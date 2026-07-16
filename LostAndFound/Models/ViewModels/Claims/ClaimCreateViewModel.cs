@@ -17,4 +17,14 @@ public class ClaimCreateViewModel
 
     [Display(Name = "Ảnh bằng chứng (tối đa 5)")]
     public List<IFormFile>? EvidenceImages { get; set; }
+
+    [Phone(ErrorMessage = "Số điện thoại không hợp lệ.")]
+    [StringLength(30)]
+    [Display(Name = "Số điện thoại (không bắt buộc)")]
+    public string? ContactPhone { get; set; }
+
+    [EmailAddress(ErrorMessage = "Email không hợp lệ.")]
+    [StringLength(256)]
+    [Display(Name = "Email (không bắt buộc)")]
+    public string? ContactEmail { get; set; }
 }

@@ -12,4 +12,6 @@ public class ClaimForHolderViewModel
     public string VerificationDetails { get; init; } = string.Empty;
     public IReadOnlyList<string> EvidenceImagePaths { get; init; } = Array.Empty<string>();
     public ClaimStatus Status { get; init; }
+    public string? ContactPhone { get; init; }
+    public string? ContactEmail { get; init; }
 }

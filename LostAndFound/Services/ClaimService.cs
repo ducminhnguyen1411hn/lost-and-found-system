@@ -72,11 +72,18 @@ public class ClaimService : IClaimService
             (c.Status == (int)ClaimStatus.Pending || c.Status == (int)ClaimStatus.Accepted));
         if (hasActive) return null;
 
+        // Prefill contact info from the claimant's own profile — holder-only field, but the claimant
+        // is free to edit or clear it before submitting (not enforced/re-validated as "must match profile").
+        var profile = await _db.Users.AsNoTracking()
+            .Where(u => u.Id == uid).Select(u => new { u.PhoneNumber, u.Email }).FirstOrDefaultAsync();
+
         return new ClaimCreateViewModel
         {
             FoundItemId = item.Id,
             ItemTitle = item.Title,
-            ItemCoverImage = item.FoundItemImage.OrderBy(im => im.SortOrder).Select(im => im.Url).FirstOrDefault()
+            ItemCoverImage = item.FoundItemImage.OrderBy(im => im.SortOrder).Select(im => im.Url).FirstOrDefault(),
+            ContactPhone = profile?.PhoneNumber,
+            ContactEmail = profile?.Email
         };
     }
 
@@ -116,6 +123,8 @@ public class ClaimService : IClaimService
             FoundItemId = vm.FoundItemId,
             ClaimantUserId = uid,
             VerificationDetails = vm.VerificationDetails.Trim(),
+            ContactPhone = string.IsNullOrWhiteSpace(vm.ContactPhone) ? null : vm.ContactPhone.Trim(),
+            ContactEmail = string.IsNullOrWhiteSpace(vm.ContactEmail) ? null : vm.ContactEmail.Trim(),
             Status = (int)ClaimStatus.Pending
             // CreatedAt store-generated.
         };
@@ -409,7 +418,7 @@ public class ClaimService : IClaimService
             .OrderBy(c => c.CreatedAt)
             .Select(c => new
             {
-                c.Id, c.ClaimantUserId, c.CreatedAt, c.VerificationDetails,
+                c.Id, c.ClaimantUserId, c.CreatedAt, c.VerificationDetails, c.ContactPhone, c.ContactEmail,
                 Images = c.ClaimImage.OrderBy(i => i.SortOrder).Select(i => i.Url).ToList()
             })
             .ToListAsync();
@@ -424,7 +433,9 @@ public class ClaimService : IClaimService
                 CreatedAt = r.CreatedAt,
                 VerificationDetails = r.VerificationDetails,
                 EvidenceImagePaths = r.Images,
-                Status = status
+                Status = status,
+                ContactPhone = r.ContactPhone,
+                ContactEmail = r.ContactEmail
             });
         }
         return result;
@@ -516,6 +527,8 @@ public class ClaimService : IClaimService
             RejectReason = claim.RejectReason,
             VerificationDetails = claim.VerificationDetails,
             EvidenceImagePaths = claim.ClaimImage.OrderBy(i => i.SortOrder).Select(i => i.Url).ToList(),
+            ContactPhone = claim.ContactPhone,
+            ContactEmail = claim.ContactEmail,
             Messages = msgs,
             ViewerIsHolder = isHolder,
             CanPostMessage = live,

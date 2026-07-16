@@ -106,6 +106,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(e => e.FoundItemId, "IX_Claim_FoundItemId");
             entity.HasIndex(e => e.HandledByUserId, "IX_Claim_HandledByUserId");
 
+            entity.Property(e => e.ContactEmail).HasMaxLength(256);
+            entity.Property(e => e.ContactPhone).HasMaxLength(30);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
             entity.Property(e => e.RejectReason).HasMaxLength(1000);
             entity.Property(e => e.VerificationDetails).HasMaxLength(2000);

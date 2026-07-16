@@ -19,6 +19,8 @@ public class ClaimDetailViewModel
     public string? RejectReason { get; init; }
     public string VerificationDetails { get; init; } = string.Empty;
     public IReadOnlyList<string> EvidenceImagePaths { get; init; } = Array.Empty<string>();
+    public string? ContactPhone { get; init; }
+    public string? ContactEmail { get; init; }
 
     public IReadOnlyList<ClaimMessageViewModel> Messages { get; init; } = Array.Empty<ClaimMessageViewModel>();
 

@@ -396,6 +396,11 @@ BEGIN
         ClaimantUserId      nvarchar(450)  NOT NULL,
         VerificationDetails nvarchar(2000) NOT NULL,
         EvidenceImagePath   nvarchar(400)  NULL,
+        -- Optional contact the claimant chooses to share, per claim. Prefilled from their profile but
+        -- overridable (a friend's number, the dorm desk...). Visible ONLY to the item's holder + Admin —
+        -- same gate as VerificationDetails. Never public.
+        ContactPhone        nvarchar(30)   NULL,
+        ContactEmail        nvarchar(256)  NULL,
         Status              int            NOT NULL CONSTRAINT DF_Claim_Status DEFAULT (0), -- 0 = Pending
         HandledByUserId     nvarchar(450)  NULL,
         RejectReason        nvarchar(1000) NULL,
@@ -410,6 +415,15 @@ BEGIN
     CREATE INDEX IX_Claim_ClaimantUserId  ON dbo.Claim (ClaimantUserId);
     CREATE INDEX IX_Claim_HandledByUserId ON dbo.Claim (HandledByUserId);
 END
+GO
+
+-- Reconcile older DBs: the two optional contact columns above were added after Claim already existed,
+-- so the CREATE TABLE block never runs for them. Idempotent + additive (nullable, no backfill needed).
+IF COL_LENGTH(N'dbo.Claim', N'ContactPhone') IS NULL
+    ALTER TABLE dbo.Claim ADD ContactPhone nvarchar(30) NULL;
+GO
+IF COL_LENGTH(N'dbo.Claim', N'ContactEmail') IS NULL
+    ALTER TABLE dbo.Claim ADD ContactEmail nvarchar(256) NULL;
 GO
 
 -- ClaimImage: 1-to-many evidence photos of a Claim (SortOrder ascending). Cascade-deletes with its claim.

@@ -34,6 +34,13 @@
                             }
                         </div>
                     }
+                    @if (!string.IsNullOrWhiteSpace(c.ContactPhone) || !string.IsNullOrWhiteSpace(c.ContactEmail))
+                    {
+                        <div class="small text-muted mb-2">
+                            📞 @(string.IsNullOrWhiteSpace(c.ContactPhone) ? "—" : c.ContactPhone)
+                            · ✉️ @(string.IsNullOrWhiteSpace(c.ContactEmail) ? "—" : c.ContactEmail)
+                        </div>
+                    }
                     <div class="d-flex gap-2">
                         <a asp-controller="Claims" asp-action="Details" asp-route-id="@c.ClaimId"
                            class="btn btn-outline-primary btn-sm">Trao đổi</a>
