@@ -53,6 +53,15 @@
 - **UTC audit done while adding them (all clean):** `schema.sql` has 10 × `SYSUTCDATETIME` and **zero** `GETDATE`/`SYSDATETIME`; every `CreatedAt` in the live DB defaults to `(sysutcdatetime())`; **zero** `DateTime.Now`/`DateTime.Today` anywhere in the C#. Proof: `SYSUTCDATETIME()` read `18:37` while `SYSDATETIME()` read `01:37` next day — exactly +7. **The fragile edge:** columns with no DB default (`FoundAt`, `LostAt`, `HandledAt`, and these two) are UTC *only because the service says so* — the DB can't enforce it. FR-CAM / FR-MATCH must use `AppTime.ToUtc` / `DateTime.UtcNow` or they'll silently drift 7 hours.
 - **Razor trap:** a view compiles into ONE method, so `@if (X is DateTime at)` in two different blocks collides (`CS0128: 'at' is already defined`). Pattern variables in a .cshtml share a single scope — name them per-site (`holderAt` / `claimantAt`).
 
+## G. Bug: the claimant was locked out of their own item the moment they received it
+
+- **Symptom:** claimant clicks "Xác nhận đã nhận đồ" → `ConfirmReceived` redirects to `/FoundItems/Details/{id}` → **404**. The state machine had actually worked (the item *did* reach `Returned`); only the landing page 404'd.
+- **Cause:** `FoundItemService.GetDetailAsync` gated visibility on `canSee = isReporter || isCustodian || isStaffish` — **the claimant was never in it**. So a party to the item couldn't open it during `ClaimAccepted` *or* after `Returned`; they only ever reached it through `/Claims/Details/{id}`.
+- **The trap in the obvious fix:** `canSee` was doing **two unrelated jobs** — gating *page access* AND gating `PrivateMarks`/`StorageLocation`. Adding the claimant to it would have handed them **the very secret they were verified against**, gutting the two-sided check — and nothing would have looked broken, because the page would render "fine". **Split the flag:** `canSeePrivate` (reporter/custodian/staff/admin) vs. being a party (`isAcceptedClaimant`) which grants **view only**.
+- **Also decided (user's call):** `Returned` items are **publicly viewable** on the detail page — FR-TL-03 finalises the timeline there and FR-THANK-02 puts the thank-you on that page, and a success story nobody can open is pointless. They stay **off the board** (which lists `Open` only). `PendingDropoff` / `ClaimAccepted` / `Unclaimed` / `Disposed` remain parties+staff only.
+- **Verified:** anon on a Returned item → 200 with **zero** PrivateMarks in the HTML; anon on a `PendingDropoff` item → still 404; the board still doesn't list the returned item.
+- **Lesson:** one boolean that answers two different questions is a latent security bug. "Can this person open the page?" and "can this person read the hidden fields?" are never the same question — the moment a third role appears (here: the claimant), merging them leaks.
+
 ## C. Deferred / follow-ups (documented, not done)
 - **FR-CLAIM-06 dispute** (staff arbitration across multiple claims) — nice-to-have, not built.
 - **SignalR realtime** (FR-NOTI-02) — bell is DB-poll only; realtime push is Dev B's, seams marked `// TODO (FR-NOTI)`.

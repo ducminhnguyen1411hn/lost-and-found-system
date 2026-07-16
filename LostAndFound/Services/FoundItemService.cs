@@ -161,11 +161,28 @@ public class FoundItemService : IFoundItemService
         var isReporter = uid != null && uid == item.ReporterUserId;
         var isCustodian = uid != null && item.CustodianStaffId != null && uid == item.CustodianStaffId;
         var isStaffish = user.IsInRole("Staff") || user.IsInRole("Admin");
-        var canSee = isReporter || isCustodian || isStaffish;
+
+        // These are TWO different questions and must not share one flag:
+        //  (1) may this viewer read the hidden fields (PrivateMarks / StorageLocation)?
+        //  (2) may this viewer open the page at all?
+        // The accepted claimant answers YES to (2) and NO to (1) — PrivateMarks is the secret they were
+        // verified against, so handing it to them would gut the whole two-sided check.
+        var canSeePrivate = isReporter || isCustodian || isStaffish;
+
+        // A party to the item: needed during ClaimAccepted (the handover panel) and after Returned —
+        // ConfirmReceived redirects straight here, so without this the claimant 404s the instant they
+        // confirm receipt of their own item.
+        var isAcceptedClaimant = uid != null && await _db.Claim.AsNoTracking()
+            .AnyAsync(c => c.FoundItemId == id && c.ClaimantUserId == uid && c.Status == (int)ClaimStatus.Accepted);
 
         var status = (FoundItemStatus)item.Status;
-        // Non-Open items (e.g. Custodial PendingDropoff) are invisible to the public.
-        if (status != FoundItemStatus.Open && !canSee) return null;
+        // Publicly viewable: Open (it's browsable) and Returned — FR-TL-03 finalises the timeline there and
+        // FR-THANK-02 puts the thank-you on this very page, and a success story nobody can open is pointless.
+        // Returned is still absent from the BOARD (that lists Open only); this is about the detail page.
+        // Everything else (PendingDropoff / ClaimAccepted / Unclaimed / Disposed) stays with the parties + staff.
+        // PrivateMarks is gated separately by canSeePrivate, so opening the page never exposes the secret.
+        var isPubliclyViewable = status == FoundItemStatus.Open || status == FoundItemStatus.Returned;
+        if (!isPubliclyViewable && !canSeePrivate && !isAcceptedClaimant) return null;
 
         // Owner may edit/delete only while the item is still editable (no claim yet).
         var hasClaim = await _db.Claim.AsNoTracking().AnyAsync(c => c.FoundItemId == id);
@@ -207,9 +224,9 @@ public class FoundItemService : IFoundItemService
             HoldingType = (HoldingType)item.HoldingType,
             Status = status,
             DisplayTags = item.FoundItemTag.Select(ft => ft.Tag.DisplayTag).ToList(),
-            CanSeePrivate = canSee,
-            PrivateMarks = canSee ? item.PrivateMarks : null,
-            StorageLocation = canSee ? item.StorageLocation : null,
+            CanSeePrivate = canSeePrivate,
+            PrivateMarks = canSeePrivate ? item.PrivateMarks : null,
+            StorageLocation = canSeePrivate ? item.StorageLocation : null,
             CanEdit = canEdit,
             PublicEvents = events
         };
