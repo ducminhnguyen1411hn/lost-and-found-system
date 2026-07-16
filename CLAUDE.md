@@ -5,12 +5,19 @@ workflow*: finders post items, losers subscribe to watch-alerts, the system auto
 and returns go through a verified two-way handover. Full specs live in **[docs/INDEX.md](docs/INDEX.md)** —
 read it before non-trivial work.
 
-> Status: **foundation only**. Features are assigned per [docs/REQUIREMENTS_2DEV.md](docs/REQUIREMENTS_2DEV.md)
-> (the `FR-*` items). Don't build feature logic unless the task asks for it.
+> **Status → [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)** — read it first. It has the FR-by-FR
+> state, what to build next, and the project-wide traps. Short version (2026-07-17): FR-AUTH / FR-FOUND /
+> FR-TAG / FR-LOG / FR-CLAIM / FR-TL are **done**; notifications are DB-only (**SignalR not built,
+> `Hubs/` is empty**); **FR-HOLD, FR-MATCH, FR-CAM, FR-THANK, FR-ADMIN are not started**. Biggest live
+> gap: **FR-HOLD** — a Custodial item lands in `PendingDropoff` and is stuck there forever, because no
+> staff-intake screen exists to move it to `Open`. **FR-ADMIN is the teammate's — don't build it here.**
+> Per-feature lessons + recipes live in [docs/features/](docs/features/); requirements in
+> [docs/specs/REQUIREMENTS_2DEV.md](docs/specs/REQUIREMENTS_2DEV.md).
 
 ## Tech stack (locked — do not swap versions)
 - **.NET 8** (`net8.0`, `LangVersion=12`). SDK on this machine is .NET 10 but the app targets/runs on 8.
-- **EF Core 8 — DB-First** (see below) · **SQL Server LocalDB** · **ASP.NET Core Identity** (roles) · **SignalR** · **Bootstrap 5** · Razor + **TagHelper** + **PartialView**.
+- **EF Core 8 — DB-First** (see below) · **SQL Server LocalDB** · **ASP.NET Core Identity** (roles) · **SignalR** *(package referenced; no Hub written yet)* · **Bootstrap 5** · Razor + **TagHelper** + **PartialView**.
+- ⚠️ **Bootstrap is pinned at v5.1.0.** `text-bg-*` (5.2+), `bg-*-subtle` (5.3+) and `object-fit-*` (5.3+) **do not exist here and fail SILENTLY** — no build error, no console warning, just an invisible element (a `.badge` with no `bg-*` is white-on-white). **Grep `wwwroot/lib/bootstrap/dist/css/bootstrap.min.css` before using any utility class.** This has bitten us three times.
 - Business log = `AuditLog` table (+ optional Serilog). All package refs stay on the **8.0.x** line.
 
 ## ⚠️ DB-First (this overrides the Code-First wording in the docs)

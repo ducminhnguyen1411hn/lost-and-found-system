@@ -2,6 +2,10 @@
 
 Single entry point for the team. Skim this first, then dive into the spec docs or `CLAUDE.md`.
 
+> 📍 **Where the project actually is right now → [`docs/PROJECT_STATUS.md`](PROJECT_STATUS.md)**
+> (FR-by-FR state, what to build next, project-wide traps, test accounts). This INDEX describes the
+> *design*; PROJECT_STATUS describes the *progress*. Per-feature lessons: [`docs/features/`](features/).
+
 > ℹ️ **Spec docs**: the 5 source documents (PRODUCT_OVERVIEW, PROJECT_INSTRUCTION, REQUIREMENTS_2DEV,
 > DIAGRAMS, FEATURE_PLAYBOOK) now live in **[`docs/specs/`](specs/)** as faithful **English translations**
 > of the Vietnamese originals. This INDEX distills the essentials; read the full spec in `docs/specs/`
