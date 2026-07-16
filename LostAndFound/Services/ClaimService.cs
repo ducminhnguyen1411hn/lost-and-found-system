@@ -395,6 +395,9 @@ public class ClaimService : IClaimService
 
         var isAcceptedClaimant = uid != null && uid == acceptedClaimantId;
 
+        // Built ONLY for the two parties, so the names inside never reach anyone else.
+        var handover = await BuildHandoverAsync(item, acceptedClaimantId, isHolder, isAcceptedClaimant);
+
         return new ItemClaimPanelViewModel
         {
             FoundItemId = foundItemId,
@@ -403,11 +406,32 @@ public class ClaimService : IClaimService
             IsHolderView = isHolder,
             PendingClaims = pending,
             AcceptedClaim = accepted,
+            Handover = handover
+        };
+    }
+
+    /// <summary>Builds the shared two-way handover card — or null when it must not render: the item isn't
+    /// ClaimAccepted, there's no accepted claim, or the viewer is neither party (blind listing: the two
+    /// names must never reach a bystander).</summary>
+    private async Task<HandoverPanelViewModel?> BuildHandoverAsync(
+        FoundItem item, string? acceptedClaimantId, bool viewerIsHolder, bool viewerIsClaimant)
+    {
+        if ((FoundItemStatus)item.Status != FoundItemStatus.ClaimAccepted) return null;
+        if (string.IsNullOrEmpty(acceptedClaimantId)) return null;
+        if (!viewerIsHolder && !viewerIsClaimant) return null;
+
+        var holderId = (HoldingType)item.HoldingType == HoldingType.SelfHeld ? item.ReporterUserId : item.CustodianStaffId;
+
+        return new HandoverPanelViewModel
+        {
+            FoundItemId = item.Id,
+            HolderName = string.IsNullOrEmpty(holderId) ? "N/A" : (await NameOf(holderId) ?? "N/A"),
+            ClaimantName = await NameOf(acceptedClaimantId) ?? "N/A",
             HolderConfirmed = item.HolderConfirmedHandover,
             ClaimantConfirmed = item.ClaimantConfirmedHandover,
-            ShowHolderHandover = isHolder && status == FoundItemStatus.ClaimAccepted,
-            ShowClaimantHandover = isAcceptedClaimant && status == FoundItemStatus.ClaimAccepted,
-            CanCancelAcceptance = isHolder && status == FoundItemStatus.ClaimAccepted
+            ViewerIsHolder = viewerIsHolder,
+            ViewerIsClaimant = viewerIsClaimant,
+            CanCancelAcceptance = viewerIsHolder
         };
     }
 
@@ -534,10 +558,12 @@ public class ClaimService : IClaimService
             CanPostMessage = live,
             CanAccept = isHolder && status == ClaimStatus.Pending && itemStatus == FoundItemStatus.Open,
             CanReject = isHolder && status == ClaimStatus.Pending,
-            CanConfirmReceived = isClaimant && status == ClaimStatus.Accepted
-                                 && itemStatus == FoundItemStatus.ClaimAccepted && !item.ClaimantConfirmedHandover,
-            HolderConfirmed = item.HolderConfirmedHandover,
-            ClaimantConfirmed = item.ClaimantConfirmedHandover
+            // Only THIS claim's claimant counts as the handover counterparty, and only once accepted.
+            Handover = await BuildHandoverAsync(
+                item,
+                status == ClaimStatus.Accepted ? claim.ClaimantUserId : null,
+                isHolder,
+                isClaimant && status == ClaimStatus.Accepted)
         };
     }
 

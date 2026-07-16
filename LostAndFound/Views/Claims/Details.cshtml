@@ -97,31 +97,10 @@
             </div>
         }
 
-        @if (Model.Status == ClaimStatus.Accepted && Model.ItemStatus == FoundItemStatus.ClaimAccepted)
+        @* Same partial as the item page — one source of truth for the handover UI. *@
+        @if (Model.Handover is not null)
         {
-            <div class="card border-success mt-3">
-                <div class="card-header bg-light">Bàn giao 2 chiều</div>
-                <div class="card-body">
-                    <p class="small mb-2">
-                        Người giữ bàn giao: @(Model.HolderConfirmed ? "✅" : "⏳") ·
-                        Người nhận xác nhận: @(Model.ClaimantConfirmed ? "✅" : "⏳")
-                    </p>
-                    @if (Model.ViewerIsHolder && !Model.HolderConfirmed)
-                    {
-                        <form asp-action="ConfirmHandover" asp-route-foundItemId="@Model.FoundItemId" method="post">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-success btn-sm">Xác nhận đã bàn giao</button>
-                        </form>
-                    }
-                    @if (Model.CanConfirmReceived)
-                    {
-                        <form asp-action="ConfirmReceived" asp-route-foundItemId="@Model.FoundItemId" method="post">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-success btn-sm">Xác nhận đã nhận đồ</button>
-                        </form>
-                    }
-                </div>
-            </div>
+            <partial name="_HandoverPanel" model="Model.Handover" />
         }
     </div>
 

@@ -65,40 +65,8 @@
     </div>
 }
 
-@* Handover panel (item is ClaimAccepted) *@
-@if (Model.Status == FoundItemStatus.ClaimAccepted && (Model.ShowHolderHandover || Model.ShowClaimantHandover))
+@* Handover panel — shared with the claim page so the two can't drift. Null = must not render. *@
+@if (Model.Handover is not null)
 {
-    <div class="card border-success mt-3">
-        <div class="card-header bg-light">Bàn giao 2 chiều</div>
-        <div class="card-body">
-            <p class="mb-2 small">
-                Người giữ xác nhận bàn giao: @(Model.HolderConfirmed ? "✅" : "⏳") ·
-                Người nhận xác nhận đã nhận: @(Model.ClaimantConfirmed ? "✅" : "⏳")
-            </p>
-            <div class="d-flex gap-2">
-                @if (Model.ShowHolderHandover && !Model.HolderConfirmed)
-                {
-                    <form asp-controller="Claims" asp-action="ConfirmHandover" asp-route-foundItemId="@Model.FoundItemId" method="post">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-success btn-sm">Xác nhận đã bàn giao</button>
-                    </form>
-                }
-                @if (Model.ShowClaimantHandover && !Model.ClaimantConfirmed)
-                {
-                    <form asp-controller="Claims" asp-action="ConfirmReceived" asp-route-foundItemId="@Model.FoundItemId" method="post">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-success btn-sm">Xác nhận đã nhận đồ</button>
-                    </form>
-                }
-                @if (Model.CanCancelAcceptance)
-                {
-                    <form asp-controller="Claims" asp-action="CancelAcceptance" asp-route-foundItemId="@Model.FoundItemId" method="post"
-                          onsubmit="return confirm('Huỷ chấp nhận và mở lại yêu cầu?');">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-outline-danger btn-sm">Huỷ chấp nhận</button>
-                    </form>
-                }
-            </div>
-        </div>
-    </div>
+    <partial name="_HandoverPanel" model="Model.Handover" />
 }

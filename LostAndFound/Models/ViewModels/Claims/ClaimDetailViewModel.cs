@@ -29,9 +29,9 @@ public class ClaimDetailViewModel
     public bool CanPostMessage { get; init; }
     public bool CanAccept { get; init; }
     public bool CanReject { get; init; }
-    public bool CanConfirmReceived { get; init; }
-    public bool HolderConfirmed { get; init; }
-    public bool ClaimantConfirmed { get; init; }
+
+    /// <summary>The two-way handover card, or null when it must not render. Same partial as the item page.</summary>
+    public HandoverPanelViewModel? Handover { get; init; }
 
     // bound on the post-message form
     [Required(ErrorMessage = "Nhập nội dung tin nhắn.")]

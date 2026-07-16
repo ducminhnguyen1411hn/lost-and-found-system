@@ -16,10 +16,7 @@ public class ItemClaimPanelViewModel
     public IReadOnlyList<ClaimForHolderViewModel> PendingClaims { get; init; } = Array.Empty<ClaimForHolderViewModel>();
     public ClaimForHolderViewModel? AcceptedClaim { get; init; }
 
-    // Handover (item is ClaimAccepted)
-    public bool HolderConfirmed { get; init; }
-    public bool ClaimantConfirmed { get; init; }
-    public bool ShowHolderHandover { get; init; }    // viewer is holder
-    public bool ShowClaimantHandover { get; init; }  // viewer is the accepted claimant
-    public bool CanCancelAcceptance { get; init; }   // viewer is holder
+    /// <summary>The two-way handover card (item is ClaimAccepted and the viewer is one of the two
+    /// parties). Null = don't render it. Shared with the claim page via the _HandoverPanel partial.</summary>
+    public HandoverPanelViewModel? Handover { get; init; }
 }
