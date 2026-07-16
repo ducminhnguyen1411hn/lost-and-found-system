@@ -17,13 +17,16 @@
             {
                 <div class="d-flex align-items-center justify-content-center text-muted small">Không có ảnh</div>
             }
-            @if (Model.ImageCount > 1)
-            {
-                @* Bootstrap 5.1 here: text-bg-* only exists from 5.2. .badge already sets color:#fff,
-                   so a bg-* utility is all that's needed — text-bg-* silently rendered white-on-white. *@
-                <span class="badge bg-dark position-absolute top-0 end-0 m-2">📷 @Model.ImageCount</span>
-            }
         </div>
+        @* This badge MUST stay OUTSIDE .ratio. Bootstrap's `.ratio > *` forces every direct child to
+           position:absolute; width:100%; height:100% — so a bg-dark badge in there stretched over the whole
+           photo and painted it solid black (only the m-2 margin let the image peek out at the edges).
+           Anchored on .card instead, which is already position-relative.
+           Also: .badge sets color:#fff itself, so bg-* is all it needs — text-bg-* is 5.2+ and this is 5.1. *@
+        @if (Model.ImageCount > 1)
+        {
+            <span class="badge bg-dark position-absolute top-0 end-0 m-2">📷 @Model.ImageCount</span>
+        }
         <div class="card-body d-flex flex-column gap-1 py-2">
             @if (showPill)
             {

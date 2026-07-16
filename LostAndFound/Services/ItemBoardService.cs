@@ -50,13 +50,24 @@ public class ItemBoardService : IItemBoardService
         DateTime? fromUtc = q.From is DateTime f ? AppTime.ToUtc(f) : null;
         DateTime? toUtc = q.To is DateTime t ? AppTime.ToUtc(t).AddMinutes(1) : null; // inclusive of the "to" minute
 
+        // Category is a 2-level tree and items are filed on the LEAF, so a parent almost always holds zero
+        // items of its own. Matching CategoryId exactly made picking a parent ("Ví & Túi") return 0 results
+        // while its children (Ví/Bóp, Túi xách, Balo) held them all. Resolve self + children once here, then
+        // match with Contains on both branches. Depth is fixed at 2, so one level of children is enough.
+        List<int>? catIds = null;
+        if (q.CategoryId is int cat)
+            catIds = await _db.Category.AsNoTracking()
+                .Where(c => c.Id == cat || c.ParentId == cat)
+                .Select(c => c.Id)
+                .ToListAsync();
+
         IQueryable<BoardRow>? union = null;
 
         if (q.Kind != ItemKind.Lost) // "Tất cả" or "Đồ nhặt được"
         {
             var fq = _db.FoundItem.AsNoTracking().Where(x => x.Status == (int)FoundItemStatus.Open);
             if (kw != null) fq = fq.Where(x => x.Title.Contains(kw) || (x.Description != null && x.Description.Contains(kw)));
-            if (q.CategoryId is int c) fq = fq.Where(x => x.CategoryId == c);
+            if (catIds != null) fq = fq.Where(x => catIds.Contains(x.CategoryId));
             if (q.LocationId is int l) fq = fq.Where(x => x.LocationId == l);
             if (fromUtc is DateTime a) fq = fq.Where(x => x.FoundAt >= a);
             if (toUtc is DateTime b) fq = fq.Where(x => x.FoundAt < b);
@@ -78,7 +89,7 @@ public class ItemBoardService : IItemBoardService
         {
             var lq = _db.LostItem.AsNoTracking().Where(x => x.Status == (int)LostItemStatus.Open);
             if (kw != null) lq = lq.Where(x => x.Title.Contains(kw) || (x.Description != null && x.Description.Contains(kw)));
-            if (q.CategoryId is int c) lq = lq.Where(x => x.CategoryId == c);
+            if (catIds != null) lq = lq.Where(x => catIds.Contains(x.CategoryId));
             if (q.LocationId is int l) lq = lq.Where(x => x.LocationId == l);
             if (fromUtc is DateTime a) lq = lq.Where(x => x.LostAt >= a);
             if (toUtc is DateTime b) lq = lq.Where(x => x.LostAt < b);
