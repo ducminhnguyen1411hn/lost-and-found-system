@@ -175,8 +175,12 @@ public class ClaimService : IClaimService
         claim.HandledAt = now;
 
         item.Status = (int)FoundItemStatus.ClaimAccepted;
+        // A fresh handover starts here — clear both flags AND their timestamps, or a stale time from a
+        // previously cancelled acceptance would show against the new claimant.
         item.HolderConfirmedHandover = false;
         item.ClaimantConfirmedHandover = false;
+        item.HolderConfirmedAt = null;
+        item.ClaimantConfirmedAt = null;
 
         // Auto-reject every OTHER pending claim on this item.
         var others = await _db.Claim
@@ -248,6 +252,7 @@ public class ClaimService : IClaimService
         if (!IsHolderOrAdmin(item, user)) return false;
 
         item.HolderConfirmedHandover = true;
+        item.HolderConfirmedAt = DateTime.UtcNow; // UTC like every stored time; views convert via AppTime
         return await FinalizeHandoverAsync(item, "Người giữ xác nhận đã bàn giao", holderActed: true);
     }
 
@@ -264,6 +269,7 @@ public class ClaimService : IClaimService
         if (accepted is null || accepted.ClaimantUserId != uid) return false; // only the accepted claimant
 
         item.ClaimantConfirmedHandover = true;
+        item.ClaimantConfirmedAt = DateTime.UtcNow;
         return await FinalizeHandoverAsync(item, "Người nhận xác nhận đã nhận", holderActed: false);
     }
 
@@ -339,6 +345,8 @@ public class ClaimService : IClaimService
         item.Status = (int)FoundItemStatus.Open;
         item.HolderConfirmedHandover = false;
         item.ClaimantConfirmedHandover = false;
+        item.HolderConfirmedAt = null;
+        item.ClaimantConfirmedAt = null;
         if (accepted is not null)
         {
             accepted.Status = (int)ClaimStatus.Rejected;
@@ -429,6 +437,8 @@ public class ClaimService : IClaimService
             ClaimantName = await NameOf(acceptedClaimantId) ?? "N/A",
             HolderConfirmed = item.HolderConfirmedHandover,
             ClaimantConfirmed = item.ClaimantConfirmedHandover,
+            HolderConfirmedAt = item.HolderConfirmedAt,
+            ClaimantConfirmedAt = item.ClaimantConfirmedAt,
             ViewerIsHolder = viewerIsHolder,
             ViewerIsClaimant = viewerIsClaimant,
             CanCancelAcceptance = viewerIsHolder

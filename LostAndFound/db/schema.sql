@@ -258,6 +258,10 @@ BEGIN
         CustodianStaffId          nvarchar(450)  NULL,
         HolderConfirmedHandover   bit            NOT NULL CONSTRAINT DF_FoundItem_HolderConfirmed DEFAULT (0),
         ClaimantConfirmedHandover bit            NOT NULL CONSTRAINT DF_FoundItem_ClaimantConfirmed DEFAULT (0),
+        -- When each side confirmed (UTC, set by the service). NULL until they do; reset to NULL whenever
+        -- the handover restarts (a claim is accepted, or the holder cancels the acceptance).
+        HolderConfirmedAt         datetime2      NULL,
+        ClaimantConfirmedAt       datetime2      NULL,
         CreatedAt                 datetime2      NOT NULL CONSTRAINT DF_FoundItem_CreatedAt DEFAULT (SYSUTCDATETIME()),
         CONSTRAINT CK_FoundItem_Status      CHECK (Status BETWEEN 0 AND 5),
         CONSTRAINT CK_FoundItem_HoldingType CHECK (HoldingType IN (0, 1)),
@@ -415,6 +419,16 @@ BEGIN
     CREATE INDEX IX_Claim_ClaimantUserId  ON dbo.Claim (ClaimantUserId);
     CREATE INDEX IX_Claim_HandledByUserId ON dbo.Claim (HandledByUserId);
 END
+GO
+
+-- Reconcile older DBs: when each side confirmed the two-way handover. Nullable + reset to NULL whenever
+-- the handover restarts (accept / cancel-acceptance). Stored UTC like every other time column here —
+-- these have no DB default because the service sets them, so it MUST use DateTime.UtcNow.
+IF COL_LENGTH(N'dbo.FoundItem', N'HolderConfirmedAt') IS NULL
+    ALTER TABLE dbo.FoundItem ADD HolderConfirmedAt datetime2 NULL;
+GO
+IF COL_LENGTH(N'dbo.FoundItem', N'ClaimantConfirmedAt') IS NULL
+    ALTER TABLE dbo.FoundItem ADD ClaimantConfirmedAt datetime2 NULL;
 GO
 
 -- Reconcile older DBs: the two optional contact columns above were added after Claim already existed,

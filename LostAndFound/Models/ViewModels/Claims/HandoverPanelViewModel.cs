@@ -15,6 +15,10 @@ public class HandoverPanelViewModel
     public bool HolderConfirmed { get; init; }
     public bool ClaimantConfirmed { get; init; }
 
+    /// <summary>When each side confirmed — stored UTC, render through AppTime. Null while still waiting.</summary>
+    public DateTime? HolderConfirmedAt { get; init; }
+    public DateTime? ClaimantConfirmedAt { get; init; }
+
     /// <summary>Viewer is the holder — show their confirm button + the cancel action.</summary>
     public bool ViewerIsHolder { get; init; }
     /// <summary>Viewer is the accepted claimant — show their confirm button.</summary>

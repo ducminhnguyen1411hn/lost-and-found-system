@@ -21,6 +21,13 @@
                         <div class="mb-1">@(Model.HolderConfirmed ? "☑" : "☐") Đã bàn giao món đồ</div>
                         <div class="small text-muted">
                             @Model.HolderName@(Model.ViewerIsHolder ? " (bạn)" : "")
+                            @* Razor compiles the whole view into ONE method, so pattern variables here share
+                               a single scope — the two sides must not both call theirs `at` (CS0128). *@
+                            @if (Model.HolderConfirmedAt is DateTime holderAt)
+                            {
+                                @* Stored UTC — always render through AppTime, never the raw value. *@
+                                <span>· @AppTime.ToLocal(holderAt).ToString("dd/MM HH:mm")</span>
+                            }
                         </div>
                         @if (Model.ViewerIsHolder && !Model.HolderConfirmed)
                         {
@@ -46,6 +53,10 @@
                         <div class="mb-1">@(Model.ClaimantConfirmed ? "☑" : "☐") Đã nhận được đồ</div>
                         <div class="small text-muted">
                             @Model.ClaimantName@(Model.ViewerIsClaimant ? " (bạn)" : "")
+                            @if (Model.ClaimantConfirmedAt is DateTime claimantAt)
+                            {
+                                <span>· @AppTime.ToLocal(claimantAt).ToString("dd/MM HH:mm")</span>
+                            }
                         </div>
                         @if (Model.ViewerIsClaimant && !Model.ClaimantConfirmed)
                         {
