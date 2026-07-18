@@ -1,4 +1,4 @@
-using LostAndFound.Data;
+﻿using LostAndFound.Data;
 using LostAndFound.Models.Entities;
 using LostAndFound.Models.Enums;
 using LostAndFound.Models.ViewModels.Admin;
@@ -28,15 +28,39 @@ public class AdminService : IAdminService
             .OrderBy(c => c.Name)
             .ToListAsync();
 
-        return categories.Select(c => new CategoryViewModel
+        var parents = categories.Where(c => c.ParentId == null).OrderBy(c => c.Name).ToList();
+        var result = new List<CategoryViewModel>();
+
+        foreach (var parent in parents)
         {
-            Id = c.Id,
-            Name = c.Name,
-            ParentId = c.ParentId,
-            ParentName = c.Parent?.Name,
-            HasChildren = c.InverseParent.Any(),
-            ItemCount = c.FoundItem.Count
-        }).ToList();
+            // Add parent category
+            result.Add(new CategoryViewModel
+            {
+                Id = parent.Id,
+                Name = parent.Name,
+                ParentId = parent.ParentId,
+                ParentName = parent.Parent?.Name,
+                HasChildren = parent.InverseParent.Any(),
+                ItemCount = parent.FoundItem.Count
+            });
+
+            // Add children categories
+            var children = categories.Where(c => c.ParentId == parent.Id).OrderBy(c => c.Name).ToList();
+            foreach (var child in children)
+            {
+                result.Add(new CategoryViewModel
+                {
+                    Id = child.Id,
+                    Name = child.Name,
+                    ParentId = child.ParentId,
+                    ParentName = child.Parent?.Name,
+                    HasChildren = child.InverseParent.Any(),
+                    ItemCount = child.FoundItem.Count
+                });
+            }
+        }
+
+        return result;
     }
 
     public async Task<CategoryViewModel?> GetCategoryByIdAsync(int id)
@@ -111,8 +135,8 @@ public class AdminService : IAdminService
         _db.Category.Add(category);
         await _db.SaveChangesAsync();
 
-        await _auditService.LogAsync(actorUserId, "Category", category.Id.ToString(),
-            "Created", null, null, $"Created category: {category.Name}", isPublic: false);
+        await _auditService.LogAsync(actorUserId, "Created", "Category", category.Id.ToString(),
+            null, null, $"Created category: {category.Name}", isPublic: false);
 
         return category.Id;
     }
@@ -145,8 +169,8 @@ public class AdminService : IAdminService
 
         await _db.SaveChangesAsync();
 
-        await _auditService.LogAsync(actorUserId, "Category", category.Id.ToString(),
-            "Updated", null, null,
+        await _auditService.LogAsync(actorUserId, "Updated", "Category", category.Id.ToString(),
+            null, null,
             $"Updated category: {oldName} -> {category.Name}, Parent: {oldParentId} -> {category.ParentId}", isPublic: false);
 
         return true;
@@ -173,8 +197,8 @@ public class AdminService : IAdminService
         _db.Category.Remove(category);
         await _db.SaveChangesAsync();
 
-        await _auditService.LogAsync(actorUserId, "Category", id.ToString(),
-            "Deleted", null, null, $"Deleted category: {categoryName}", isPublic: false);
+        await _auditService.LogAsync(actorUserId, "Deleted", "Category", id.ToString(),
+            null, null, $"Deleted category: {categoryName}", isPublic: false);
 
         return true;
     }
@@ -263,8 +287,8 @@ public class AdminService : IAdminService
         _db.Location.Add(location);
         await _db.SaveChangesAsync();
 
-        await _auditService.LogAsync(actorUserId, "Location", location.Id.ToString(),
-            "Created", null, null, $"Created location: {location.Name}", isPublic: false);
+        await _auditService.LogAsync(actorUserId, "Created", "Location", location.Id.ToString(),
+            null, null, $"Created location: {location.Name}", isPublic: false);
 
         return location.Id;
     }
@@ -282,8 +306,8 @@ public class AdminService : IAdminService
 
         await _db.SaveChangesAsync();
 
-        await _auditService.LogAsync(actorUserId, "Location", location.Id.ToString(),
-            "Updated", null, null,
+        await _auditService.LogAsync(actorUserId, "Updated", "Location", location.Id.ToString(),
+            null, null,
             $"Updated location: {oldBuilding} {oldName} -> {location.Building} {location.Name}", isPublic: false);
 
         return true;
@@ -305,8 +329,8 @@ public class AdminService : IAdminService
         _db.Location.Remove(location);
         await _db.SaveChangesAsync();
 
-        await _auditService.LogAsync(actorUserId, "Location", id.ToString(),
-            "Deleted", null, null, $"Deleted location: {locationName}", isPublic: false);
+        await _auditService.LogAsync(actorUserId, "Deleted", "Location", id.ToString(),
+            null, null, $"Deleted location: {locationName}", isPublic: false);
 
         return true;
     }
@@ -393,8 +417,8 @@ public class AdminService : IAdminService
         _db.Tag.Remove(sourceTag);
         await _db.SaveChangesAsync();
 
-        await _auditService.LogAsync(actorUserId, "Tag", sourceTagId.ToString(),
-            "Merged", null, null,
+        await _auditService.LogAsync(actorUserId, "Merged", "Tag", $"{sourceTagId}->{targetTagId}",
+            null, null,
             $"Merged tag '{sourceTagName}' into '{targetTagName}'", isPublic: false);
 
         return true;
@@ -414,8 +438,8 @@ public class AdminService : IAdminService
         _db.Tag.RemoveRange(unusedTags);
         await _db.SaveChangesAsync();
 
-        await _auditService.LogAsync(actorUserId, "Tag", "bulk",
-            "Deleted", null, null, $"Deleted {count} unused tags", isPublic: false);
+        await _auditService.LogAsync(actorUserId, "Deleted", "Tag", "bulk",
+            null, null, $"Deleted {count} unused tags", isPublic: false);
 
         return true;
     }
@@ -459,8 +483,8 @@ public class AdminService : IAdminService
 
         await _db.SaveChangesAsync();
 
-        await _auditService.LogAsync(actorUserId, "FoundItem", itemId.ToString(),
-            "Disposed", oldStatus.ToString(), item.Status.ToString(),
+        await _auditService.LogAsync(actorUserId, "Disposed", "FoundItem", itemId.ToString(),
+            oldStatus.ToString(), item.Status.ToString(),
             $"Item disposed: {item.Title}", isPublic: false);
 
         return true;

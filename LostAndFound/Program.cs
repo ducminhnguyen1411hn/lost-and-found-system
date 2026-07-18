@@ -23,7 +23,7 @@ namespace LostAndFound
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(connectionString));
 
-            // ---- ASP.NET Core Identity (role-based: Guest / Member / Staff / Admin) ----
+            // ---- ASP.NET Core Identity (role-based: Member / Staff / Admin) ----
             builder.Services
                 .AddDefaultIdentity<ApplicationUser>(options =>
                 {

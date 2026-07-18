@@ -1,11 +1,11 @@
 @model LostAndFound.Models.ViewModels.Admin.DashboardViewModel
 @{
-    ViewData["Title"] = "Admin Dashboard";
+    ViewData["Title"] = "Dashboard Quản trị";
 }
 
 <div class="container mt-4 mb-5">
-    <h3 class="fw-bold mb-1 text-dark">Admin Dashboard</h3>
-    <p class="text-muted mb-4">Overview of system statistics and recent activity</p>
+    <h3 class="fw-bold mb-1 text-dark">Dashboard Quản trị</h3>
+    <p class="text-muted mb-4">Tổng quan thống kê hệ thống và hoạt động gần đây</p>
 
     @if (TempData["SuccessMessage"] != null)
     {
@@ -20,7 +20,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm h-100" style="border-radius: 8px;">
                 <div class="card-body">
-                    <h6 class="text-muted mb-2" style="font-size: 0.85rem;">Total Found Items</h6>
+                    <h6 class="text-muted mb-2" style="font-size: 0.85rem;">Tổng đồ nhặt được</h6>
                     <h3 class="fw-bold mb-0 text-dark">@Model.TotalFoundItems</h3>
                 </div>
             </div>
@@ -28,7 +28,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm h-100" style="border-radius: 8px;">
                 <div class="card-body">
-                    <h6 class="text-muted mb-2" style="font-size: 0.85rem;">Returned Items</h6>
+                    <h6 class="text-muted mb-2" style="font-size: 0.85rem;">Đã trả lại</h6>
                     <h3 class="fw-bold mb-0 text-success">@Model.ReturnedItems</h3>
                 </div>
             </div>
@@ -36,7 +36,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm h-100" style="border-radius: 8px;">
                 <div class="card-body">
-                    <h6 class="text-muted mb-2" style="font-size: 0.85rem;">Return Rate</h6>
+                    <h6 class="text-muted mb-2" style="font-size: 0.85rem;">Tỷ lệ trả lại</h6>
                     <h3 class="fw-bold mb-0 text-primary">@Model.ReturnRate.ToString("F1")%</h3>
                 </div>
             </div>
@@ -44,8 +44,8 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm h-100" style="border-radius: 8px;">
                 <div class="card-body">
-                    <h6 class="text-muted mb-2" style="font-size: 0.85rem;">Avg Return Time</h6>
-                    <h3 class="fw-bold mb-0 text-info">@Model.AverageReturnDays.ToString("F1") days</h3>
+                    <h6 class="text-muted mb-2" style="font-size: 0.85rem;">Thời gian trả TB</h6>
+                    <h3 class="fw-bold mb-0 text-info">@Model.AverageReturnDays.ToString("F1") ngày</h3>
                 </div>
             </div>
         </div>
@@ -55,21 +55,21 @@
         <div class="col-md-6">
             <div class="card border-0 shadow-sm h-100" style="border-radius: 8px;">
                 <div class="card-body">
-                    <h6 class="text-muted mb-3" style="font-size: 0.85rem;">Longest Unclaimed Item</h6>
-                    <h3 class="fw-bold mb-0 text-warning">@Model.LongestUnclaimedDays days</h3>
+                    <h6 class="text-muted mb-3" style="font-size: 0.85rem;">Đồ chưa nhận lâu nhất</h6>
+                    <h3 class="fw-bold mb-0 text-warning">@Model.LongestUnclaimedDays ngày</h3>
                 </div>
             </div>
         </div>
         <div class="col-md-6">
             <div class="card border-0 shadow-sm h-100" style="border-radius: 8px;">
                 <div class="card-body">
-                    <h6 class="text-muted mb-3" style="font-size: 0.85rem;">Quick Actions</h6>
+                    <h6 class="text-muted mb-3" style="font-size: 0.85rem;">Hành động nhanh</h6>
                     <div class="d-flex gap-2 flex-wrap">
-                        <a asp-action="Categories" class="btn btn-outline-primary btn-sm" style="border-radius: 6px;">Manage Categories</a>
-                        <a asp-action="Locations" class="btn btn-outline-primary btn-sm" style="border-radius: 6px;">Manage Locations</a>
-                        <a asp-action="Tags" class="btn btn-outline-primary btn-sm" style="border-radius: 6px;">Manage Tags</a>
-                        <a asp-action="Unclaimed" class="btn btn-outline-warning btn-sm" style="border-radius: 6px;">Unclaimed Items</a>
-                        <a asp-action="AuditLog" class="btn btn-outline-secondary btn-sm" style="border-radius: 6px;">Audit Log</a>
+                        <a asp-action="Categories" class="btn btn-outline-primary btn-sm" style="border-radius: 6px;">Quản lý danh mục</a>
+                        <a asp-action="Locations" class="btn btn-outline-primary btn-sm" style="border-radius: 6px;">Quản lý địa điểm</a>
+                        <a asp-action="Tags" class="btn btn-outline-primary btn-sm" style="border-radius: 6px;">Quản lý thẻ</a>
+                        <a asp-action="Unclaimed" class="btn btn-outline-warning btn-sm" style="border-radius: 6px;">Đồ chưa nhận</a>
+                        <a asp-action="AuditLog" class="btn btn-outline-secondary btn-sm" style="border-radius: 6px;">Nhật ký</a>
                     </div>
                 </div>
             </div>
@@ -80,14 +80,14 @@
         <div class="col-md-6">
             <div class="card border-0 shadow-sm h-100" style="border-radius: 8px;">
                 <div class="card-body">
-                    <h6 class="fw-bold mb-3 text-dark">Top Finders</h6>
+                    <h6 class="fw-bold mb-3 text-dark">Người nhặt nhiều nhất</h6>
                     @if (Model.TopFinders.Any())
                     {
                         <table class="table table-sm">
                             <thead>
                                 <tr>
-                                    <th class="border-0">User</th>
-                                    <th class="border-0 text-end">Items Found</th>
+                                    <th class="border-0">Người dùng</th>
+                                    <th class="border-0 text-end">Số đồ nhặt</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -103,7 +103,7 @@
                     }
                     else
                     {
-                        <p class="text-muted mb-0">No data available</p>
+                        <p class="text-muted mb-0">Không có dữ liệu</p>
                     }
                 </div>
             </div>
@@ -111,17 +111,17 @@
         <div class="col-md-6">
             <div class="card border-0 shadow-sm h-100" style="border-radius: 8px;">
                 <div class="card-body">
-                    <h6 class="fw-bold mb-3 text-dark">Recent Activity</h6>
+                    <h6 class="fw-bold mb-3 text-dark">Hoạt động gần đây</h6>
                     @if (Model.RecentActivities.Any())
                     {
                         <div class="table-responsive">
                             <table class="table table-sm">
                                 <thead>
                                     <tr>
-                                        <th class="border-0">Action</th>
-                                        <th class="border-0">Entity</th>
-                                        <th class="border-0">Actor</th>
-                                        <th class="border-0">Time</th>
+                                        <th class="border-0">Hành động</th>
+                                        <th class="border-0">Đối tượng</th>
+                                        <th class="border-0">Người thực hiện</th>
+                                        <th class="border-0">Thời gian</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -131,7 +131,7 @@
                                             <td class="border-0">@activity.Action</td>
                                             <td class="border-0">@activity.EntityType #@activity.EntityId</td>
                                             <td class="border-0">@activity.ActorName</td>
-                                            <td class="border-0 text-muted" style="font-size: 0.85rem;">@activity.CreatedAt.ToString("MM/dd HH:mm")</td>
+                                            <td class="border-0 text-muted" style="font-size: 0.85rem;">@activity.CreatedAt.ToString("dd/MM HH:mm")</td>
                                         </tr>
                                     }
                                 </tbody>
@@ -140,7 +140,7 @@
                     }
                     else
                     {
-                        <p class="text-muted mb-0">No recent activity</p>
+                        <p class="text-muted mb-0">Không có hoạt động gần đây</p>
                     }
                 </div>
             </div>

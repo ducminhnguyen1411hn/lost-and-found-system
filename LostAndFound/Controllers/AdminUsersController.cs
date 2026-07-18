@@ -32,7 +32,9 @@ namespace LostAndFound.Controllers
                     UserId = user.Id,
                     FullName = user.FullName ?? "N/A",
                     Email = user.Email,
-                    Roles = await _userManager.GetRolesAsync(user)
+                    Roles = await _userManager.GetRolesAsync(user),
+                    IsBlocked = user.IsBlocked,
+                    IsPostingBlocked = user.IsPostingBlocked
                 });
             }
             return View(model);
@@ -53,7 +55,9 @@ namespace LostAndFound.Controllers
             {
                 UserId = user.Id,
                 Email = user.Email,
-                FullName = user.FullName ?? "N/A"
+                FullName = user.FullName ?? "N/A",
+                IsBlocked = user.IsBlocked,
+                IsPostingBlocked = user.IsPostingBlocked
             };
 
             // Tự động sinh danh sách checkbox từ các Role có trong DB
@@ -72,23 +76,22 @@ namespace LostAndFound.Controllers
         // POST: /AdminUsers/Edit
         [HttpPost]
         [ValidateAntiForgeryToken] // Chống tấn công CSRF bảo mật cho Admin
-        public async Task<IActionResult> Edit(EditUserRolesViewModel model)
+        public async Task<IActionResult> Edit(EditUserRolesViewModel model, string selectedRole)
         {
             var user = await _userManager.FindByIdAsync(model.UserId);
             if (user == null) return NotFound();
 
             // CHỐT CHẶN BẢO MẬT 1: Admin không được tự gỡ quyền Admin của chính mình
             var currentLoggedInUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var isAdminSelected = model.Roles.Any(r => r.RoleName == "Admin" && r.IsSelected);
 
-            if (user.Id == currentLoggedInUserId && !isAdminSelected)
+            if (user.Id == currentLoggedInUserId && selectedRole != "Admin")
             {
                 ModelState.AddModelError(string.Empty, "Guards: You cannot remove your own Admin role.");
                 return View(model);
             }
 
             // CHỐT CHẶN BẢO MẬT 2: Không cho phép xóa vị Admin cuối cùng trong hệ thống
-            if (!isAdminSelected)
+            if (selectedRole != "Admin")
             {
                 var allAdmins = await _userManager.GetUsersInRoleAsync("Admin");
                 if (allAdmins.Count <= 1 && allAdmins.Any(u => u.Id == user.Id))
@@ -98,17 +101,35 @@ namespace LostAndFound.Controllers
                 }
             }
 
+            // CHỐT CHẶN BẢO MẬT 3: Admin không được tự chặn chính mình
+            if (user.Id == currentLoggedInUserId && model.IsBlocked)
+            {
+                ModelState.AddModelError(string.Empty, "Guards: You cannot block yourself.");
+                return View(model);
+            }
+
+            // Đảm bảo chỉ có 1 role được chọn
+            if (string.IsNullOrEmpty(selectedRole))
+            {
+                ModelState.AddModelError(string.Empty, "Mỗi người dùng phải có ít nhất một role.");
+                return View(model);
+            }
+
             var currentRoles = await _userManager.GetRolesAsync(user);
 
-            // Lọc ra các quyền cần thêm và các quyền cần xóa bỏ
-            var rolesToAdd = model.Roles.Where(r => r.IsSelected && !currentRoles.Contains(r.RoleName)).Select(r => r.RoleName);
-            var rolesToRemove = model.Roles.Where(r => !r.IsSelected && currentRoles.Contains(r.RoleName)).Select(r => r.RoleName);
+            // Xóa tất cả roles hiện tại và chỉ gán role được chọn (đảm bảo 1 role duy nhất)
+            if (currentRoles.Any())
+            {
+                await _userManager.RemoveFromRolesAsync(user, currentRoles);
+            }
+            await _userManager.AddToRoleAsync(user, selectedRole);
 
-            // Thực thi cập nhật Database hiệu năng cao (Bulk operation)
-            if (rolesToAdd.Any()) await _userManager.AddToRolesAsync(user, rolesToAdd);
-            if (rolesToRemove.Any()) await _userManager.RemoveFromRolesAsync(user, rolesToRemove);
+            // Cập nhật blocking flags
+            user.IsBlocked = model.IsBlocked;
+            user.IsPostingBlocked = model.IsPostingBlocked;
+            await _userManager.UpdateAsync(user);
 
-            TempData["SuccessMessage"] = $"Roles updated successfully for {user.Email}.";
+            TempData["SuccessMessage"] = $"Cập nhật thành công cho {user.Email}.";
             return RedirectToAction(nameof(Index));
         }
     }

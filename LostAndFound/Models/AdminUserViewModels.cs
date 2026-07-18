@@ -9,6 +9,8 @@ namespace LostAndFound.Models
         public string FullName { get; set; }
         public string Email { get; set; }
         public IList<string> Roles { get; set; }
+        public bool IsBlocked { get; set; }
+        public bool IsPostingBlocked { get; set; }
     }
 
     // Dùng cho trang chỉnh sửa Edit
@@ -17,6 +19,8 @@ namespace LostAndFound.Models
         public string UserId { get; set; }
         public string Email { get; set; }
         public string FullName { get; set; }
+        public bool IsBlocked { get; set; }
+        public bool IsPostingBlocked { get; set; }
         public List<RoleSelectionViewModel> Roles { get; set; } = new List<RoleSelectionViewModel>();
     }
 

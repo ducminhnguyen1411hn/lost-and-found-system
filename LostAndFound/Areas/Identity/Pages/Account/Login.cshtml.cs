@@ -74,10 +74,21 @@ namespace LostAndFound.Areas.Identity.Pages.Account
 
             if (ModelState.IsValid)
             {
+                // Chặn tài khoản đã bị block trước khi đăng nhập  
+                var existingUser = await _userManager.FindByEmailAsync(Input.Email);
+                if (existingUser != null && existingUser.IsBlocked)
+                {
+                    ModelState.AddModelError(string.Empty, "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
+                    return Page();
+                }
+
                 var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
                 if (result.Succeeded)
                 {
                     _logger.LogInformation("User logged in.");
+                    // Admin -> dashboard admin; còn lại giữ returnUrl  
+                    if (existingUser != null && await _userManager.IsInRoleAsync(existingUser, "Admin"))
+                        return RedirectToAction("Index", "Admin");
                     return LocalRedirect(returnUrl);
                 }
 
@@ -114,24 +125,32 @@ namespace LostAndFound.Areas.Identity.Pages.Account
                 return RedirectToPage("./Login");
             }
 
+            var email = info.Principal.FindFirstValue(System.Security.Claims.ClaimTypes.Email)
+                ?? throw new InvalidOperationException("Email claim not found.");
+
             var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
             if (result.Succeeded)
             {
                 _logger.LogInformation("User logged in via external provider.");
+                
+                // Check if user is Admin and redirect to Admin dashboard
+                var user = await _userManager.FindByEmailAsync(email);
+                if (user != null && await _userManager.IsInRoleAsync(user, "Admin"))
+                {
+                    return LocalRedirect("/Admin");
+                }
+                
                 return LocalRedirect(returnUrl);
             }
 
-            var email = info.Principal.FindFirstValue(System.Security.Claims.ClaimTypes.Email)
-                ?? throw new InvalidOperationException("Email claim not found.");
-
-            var user = new ApplicationUser
+            var newUser = new ApplicationUser
             {
                 UserName = email,
                 Email = email,
                 FullName = info.Principal.FindFirstValue(System.Security.Claims.ClaimTypes.Name) ?? email
             };
 
-            var createResult = await _userManager.CreateAsync(user);
+            var createResult = await _userManager.CreateAsync(newUser);
             if (!createResult.Succeeded)
             {
                 _logger.LogError($"Failed to create user: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
@@ -139,7 +158,7 @@ namespace LostAndFound.Areas.Identity.Pages.Account
                 return Page();
             }
 
-            var loginResult = await _userManager.AddLoginAsync(user, info);
+            var loginResult = await _userManager.AddLoginAsync(newUser, info);
             if (!loginResult.Succeeded)
             {
                 _logger.LogError($"Failed to add login: {string.Join(", ", loginResult.Errors.Select(e => e.Description))}");
@@ -147,9 +166,9 @@ namespace LostAndFound.Areas.Identity.Pages.Account
                 return Page();
             }
 
-            await _userManager.AddToRoleAsync(user, "Member");
+            await _userManager.AddToRoleAsync(newUser, "Member");
 
-            await _signInManager.SignInAsync(user, isPersistent: false);
+            await _signInManager.SignInAsync(newUser, isPersistent: false);
             _logger.LogInformation("User created and logged in via external provider.");
             return LocalRedirect(returnUrl);
         }

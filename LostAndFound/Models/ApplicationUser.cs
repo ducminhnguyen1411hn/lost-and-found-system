@@ -13,4 +13,10 @@ public class ApplicationUser : IdentityUser
     /// register page still works; the FR-AUTH feature makes it required at the app layer.</summary>
     public string? FullName { get; set; }
 
+    /// <summary>Whether the user is completely blocked from accessing the system.</summary>
+    public bool IsBlocked { get; set; }
+
+    /// <summary>Whether the user is blocked from posting found items (but can still browse).</summary>
+    public bool IsPostingBlocked { get; set; }
+
 }
