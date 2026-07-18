@@ -8,12 +8,13 @@ using Microsoft.Extensions.DependencyInjection;
 namespace LostAndFound.Data;
 
 /// <summary>
-/// Foundation seeding: the 4 roles + Starter Users (Admin, Staff, Member) for FR-AUTH-04.
+/// Foundation seeding: the 3 roles + Starter Users (Admin, Staff, Member) for FR-AUTH-04.
 /// Idempotent (safe to run on every startup).
+/// Note: Guest is not a role - it's the state of unauthenticated users.
 /// </summary>
 public static class SeedData
 {
-    public static readonly string[] Roles = { "Guest", "Member", "Staff", "Admin" };
+    public static readonly string[] Roles = { "Member", "Staff", "Admin" };
 
     private const string AdminEmail = "admin@lostandfound.local";
     private const string AdminPassword = "Admin#12345";

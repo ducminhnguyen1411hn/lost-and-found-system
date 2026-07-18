@@ -46,10 +46,19 @@ public class FoundItemsController : Controller
     }
 
     // GET /FoundItems/Create — report form
-    [Authorize(Roles = "Member,Staff,Admin")]
+    [Authorize(Roles = "Member,Staff")]
     [HttpGet]
     public async Task<IActionResult> Create()
     {
+        // Check if user is posting blocked
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var user = await _db.Users.FindAsync(userId);
+        if (user != null && user.IsPostingBlocked)
+        {
+            TempData["ErrorMessage"] = "Bạn đã bị chặn đăng bài. Vui lòng liên hệ quản trị viên.";
+            return RedirectToAction(nameof(Index));
+        }
+
         var vm = new FoundItemCreateViewModel
         {
             FoundAt = AppTime.LocalNow,
@@ -60,15 +69,23 @@ public class FoundItemsController : Controller
     }
 
     // POST /FoundItems/Create
-    [Authorize(Roles = "Member,Staff,Admin")]
+    [Authorize(Roles = "Member,Staff")]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(FoundItemCreateViewModel vm)
     {
+        // Check if user is posting blocked
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var user = await _db.Users.FindAsync(userId);
+        if (user != null && user.IsPostingBlocked)
+        {
+            TempData["ErrorMessage"] = "Bạn đã bị chặn đăng bài. Vui lòng liên hệ quản trị viên.";
+            return RedirectToAction(nameof(Index));
+        }
+
         if (!ModelState.IsValid)
             return await RedisplayCreate(vm);
 
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         try
         {
             var id = await _service.CreateAsync(vm, userId);
@@ -155,17 +172,35 @@ public class FoundItemsController : Controller
     private async Task<List<SelectListItem>> BuildCategorySelectAsync(int? selected = null)
     {
         var cats = await _db.Category.AsNoTracking().ToListAsync();
+        var parents = cats.Where(c => c.ParentId == null).OrderBy(c => c.Name).ToList();
         var byId = cats.ToDictionary(c => c.Id);
-        return cats
-            .OrderBy(c => c.ParentId == null ? c.Name : byId[c.ParentId.Value].Name)
-            .ThenBy(c => c.ParentId == null ? string.Empty : c.Name)
-            .Select(c => new SelectListItem
+        
+        var result = new List<SelectListItem>();
+        
+        foreach (var parent in parents)
+        {
+            // Add parent category
+            result.Add(new SelectListItem
             {
-                Value = c.Id.ToString(),
-                Text = c.ParentId != null && byId.TryGetValue(c.ParentId.Value, out var p) ? $"{p.Name} › {c.Name}" : c.Name,
-                Selected = selected == c.Id
-            })
-            .ToList();
+                Value = parent.Id.ToString(),
+                Text = parent.Name,
+                Selected = selected == parent.Id
+            });
+            
+            // Add children categories with indentation
+            var children = cats.Where(c => c.ParentId == parent.Id).OrderBy(c => c.Name).ToList();
+            foreach (var child in children)
+            {
+                result.Add(new SelectListItem
+                {
+                    Value = child.Id.ToString(),
+                    Text = $"  {child.Name}",
+                    Selected = selected == child.Id
+                });
+            }
+        }
+        
+        return result;
     }
 
     private async Task<List<SelectListItem>> BuildLocationSelectAsync(int? selected = null)

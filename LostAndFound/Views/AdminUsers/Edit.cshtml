@@ -1,12 +1,12 @@
 ﻿@model LostAndFound.Models.EditUserRolesViewModel
 @{
-    ViewData["Title"] = "Edit user roles";
+    ViewData["Title"] = "Sửa thông tin người dùng";
 }
 
 <div class="container mt-4 mb-5">
     <div class="row">
         <div class="col-md-8 col-lg-6">
-            <h3 class="fw-bold mb-1 text-dark">Edit user roles</h3>
+            <h3 class="fw-bold mb-1 text-dark">Sửa thông tin người dùng</h3>
             <p class="text-muted mb-4">@Model.FullName — @Model.Email</p>
 
             <form asp-action="Edit" method="post">
@@ -20,29 +20,51 @@
 
                 <div class="card shadow-sm mb-4" style="border: 1px solid #e5e7eb; border-radius: 8px;">
                     <div class="card-body p-4">
-                        <h6 class="fw-bold mb-3 text-dark">Roles</h6>
+                        <h6 class="fw-bold mb-3 text-dark">Vai trò (chỉ chọn 1)</h6>
 
-                        @* Vòng lặp for tối ưu cho Model Binding danh sách *@
-                        @for (int i = 0; i < Model.Roles.Count; i++)
+                        @* Radio button group for single role selection *@
+                        @foreach (var role in Model.Roles)
                         {
                             <div class="form-check mb-2">
-                                <input type="hidden" asp-for="Roles[i].RoleName" />
-                                <input class="form-check-input" type="checkbox" asp-for="Roles[i].IsSelected" id="role_@i" />
-                                <label class="form-check-label text-dark user-select-none" for="role_@i">
-                                    @Model.Roles[i].RoleName
+                                <input class="form-check-input" type="radio" name="selectedRole" id="role_@role.RoleName" value="@role.RoleName" 
+                                       @(role.IsSelected ? "checked" : "") />
+                                <label class="form-check-label text-dark user-select-none" for="role_@role.RoleName">
+                                    @role.RoleName
                                 </label>
                             </div>
                         }
 
                         <p class="small text-muted mb-0 mt-4" style="font-size: 0.85rem; border-top: 1px dashed #e5e7eb; padding-top: 12px;">
-                            <i class="bi bi-shield-lock-fill me-1"></i>Guards: can't remove your own Admin role or the last remaining Admin; role changes are audited.
+                            <i class="bi bi-shield-lock-fill me-1"></i>Bảo vệ: mỗi người dùng chỉ có 1 vai trò; không thể xóa vai trò Admin của chính mình hoặc Admin cuối cùng.
                         </p>
                     </div>
                 </div>
 
+                <div class="card shadow-sm mb-4" style="border: 1px solid #e5e7eb; border-radius: 8px;">
+                    <div class="card-body p-4">
+                        <h6 class="fw-bold mb-3 text-dark">Chặn người dùng</h6>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" asp-for="IsBlocked" id="IsBlocked" />
+                            <label class="form-check-label text-dark user-select-none" for="IsBlocked">
+                                Chặn toàn bộ truy cập
+                            </label>
+                            <p class="small text-muted mb-0 mt-1">Người dùng sẽ không thể đăng nhập vào hệ thống.</p>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" asp-for="IsPostingBlocked" id="IsPostingBlocked" />
+                            <label class="form-check-label text-dark user-select-none" for="IsPostingBlocked">
+                                Chặn đăng bài
+                            </label>
+                            <p class="small text-muted mb-0 mt-1">Người dùng vẫn có thể xem và tìm kiếm, nhưng không thể đăng đồ nhặt được.</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary px-4 py-2" style="background-color: #2563eb; border: none; border-radius: 6px; font-weight: 500;">Save changes</button>
-                    <a asp-action="Index" class="btn btn-outline-secondary px-4 py-2" style="border-radius: 6px; border-color: #d1d5db; color: #374151; font-weight: 500;">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-4 py-2" style="background-color: #2563eb; border: none; border-radius: 6px; font-weight: 500;">Lưu thay đổi</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary px-4 py-2" style="border-radius: 6px; border-color: #d1d5db; color: #374151; font-weight: 500;">Hủy</a>
                 </div>
             </form>
         </div>

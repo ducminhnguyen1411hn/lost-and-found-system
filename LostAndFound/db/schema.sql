@@ -74,7 +74,10 @@ BEGIN
         -- Project-specific profile column (nullable so the default Identity register UI still
         -- works; the FR-AUTH feature makes FullName required at the app layer). This is a generic
         -- *school* lost-and-found for ANY level — user profile = FullName + Email + PhoneNumber only.
-        FullName             nvarchar(200)     NULL
+        FullName             nvarchar(200)     NULL,
+        -- User management columns for admin control
+        IsBlocked            bit               NOT NULL CONSTRAINT DF_AspNetUsers_IsBlocked DEFAULT (0),
+        IsPostingBlocked     bit               NOT NULL CONSTRAINT DF_AspNetUsers_IsPostingBlocked DEFAULT (0)
     );
     CREATE UNIQUE INDEX UserNameIndex ON dbo.AspNetUsers (NormalizedUserName) WHERE NormalizedUserName IS NOT NULL;
     CREATE INDEX EmailIndex ON dbo.AspNetUsers (NormalizedEmail);
