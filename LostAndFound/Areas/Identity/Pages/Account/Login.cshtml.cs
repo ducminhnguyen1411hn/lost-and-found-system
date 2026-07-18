@@ -74,18 +74,21 @@ namespace LostAndFound.Areas.Identity.Pages.Account
 
             if (ModelState.IsValid)
             {
+                // Chặn tài khoản đã bị block trước khi đăng nhập  
+                var existingUser = await _userManager.FindByEmailAsync(Input.Email);
+                if (existingUser != null && existingUser.IsBlocked)
+                {
+                    ModelState.AddModelError(string.Empty, "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
+                    return Page();
+                }
+
                 var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
                 if (result.Succeeded)
                 {
                     _logger.LogInformation("User logged in.");
-                    
-                    // Check if user is Admin and redirect to Admin dashboard
-                    var user = await _userManager.FindByEmailAsync(Input.Email);
-                    if (user != null && await _userManager.IsInRoleAsync(user, "Admin"))
-                    {
-                        return LocalRedirect("/Admin");
-                    }
-                    
+                    // Admin -> dashboard admin; còn lại giữ returnUrl  
+                    if (existingUser != null && await _userManager.IsInRoleAsync(existingUser, "Admin"))
+                        return RedirectToAction("Index", "Admin");
                     return LocalRedirect(returnUrl);
                 }
 
