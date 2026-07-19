@@ -46,7 +46,7 @@
                 {
                     <tr>
                         <td class="py-3 border-bottom fw-medium text-dark">
-                            @if (category.ParentId != null)
+                            @if (category.Level > 0)
                             {
                                 <span class="ms-3">└ @category.Name</span>
                             }
@@ -55,7 +55,7 @@
                                 @category.Name
                             }
                         </td>
-                        <td class="py-3 border-bottom">@category.ParentName ?? "-"</td>
+                        <td class="py-3 border-bottom">@(category.ParentName ?? "-")</td>
                         <td class="py-3 border-bottom">
                             <span class="badge bg-secondary" style="border-radius: 4px;">@category.ItemCount</span>
                         </td>

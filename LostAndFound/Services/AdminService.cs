@@ -41,10 +41,11 @@ public class AdminService : IAdminService
                 ParentId = parent.ParentId,
                 ParentName = parent.Parent?.Name,
                 HasChildren = parent.InverseParent.Any(),
-                ItemCount = parent.FoundItem.Count
+                ItemCount = parent.FoundItem.Count,
+                Level = 0 // Root level
             });
 
-            // Add children categories
+            // Add children categories (nested under parent)
             var children = categories.Where(c => c.ParentId == parent.Id).OrderBy(c => c.Name).ToList();
             foreach (var child in children)
             {
@@ -55,7 +56,8 @@ public class AdminService : IAdminService
                     ParentId = child.ParentId,
                     ParentName = child.Parent?.Name,
                     HasChildren = child.InverseParent.Any(),
-                    ItemCount = child.FoundItem.Count
+                    ItemCount = child.FoundItem.Count,
+                    Level = 1 // Child level
                 });
             }
         }
@@ -417,9 +419,9 @@ public class AdminService : IAdminService
         _db.Tag.Remove(sourceTag);
         await _db.SaveChangesAsync();
 
-        await _auditService.LogAsync(actorUserId, "Merged", "Tag", $"{sourceTagId}->{targetTagId}",
+        await _auditService.LogAsync(actorUserId, "Merged", "Tag", targetTagId.ToString(),
             null, null,
-            $"Merged tag '{sourceTagName}' into '{targetTagName}'", isPublic: false);
+            $"Merged tag '{sourceTagName}' (ID: {sourceTagId}) into '{targetTagName}' (ID: {targetTagId})", isPublic: false);
 
         return true;
     }
