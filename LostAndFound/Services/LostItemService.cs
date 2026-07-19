@@ -191,7 +191,8 @@ public class LostItemService : ILostItemService
             LostAt = AppTime.ToLocal(item.LostAt),
             TagsRaw = string.Join(", ", item.LostItemTag.Select(lt => lt.Tag.DisplayTag)),
             ExistingImages = item.LostItemImage.OrderBy(im => im.SortOrder)
-                .Select(im => new LostItemEditViewModel.ImageItem { Id = im.Id, Url = im.Url }).ToList()
+                .Select(im => new LostItemEditViewModel.ImageItem { Id = im.Id, Url = im.Url }).ToList(),
+            CoverImageId = item.LostItemImage.OrderBy(im => im.SortOrder).Select(im => (int?)im.Id).FirstOrDefault()
         };
     }
 
@@ -229,6 +230,12 @@ public class LostItemService : ILostItemService
         var toRemove = item.LostItemImage.Where(im => removeIds.Contains(im.Id)).ToList();
         if (toRemove.Count > 0) _db.LostItemImage.RemoveRange(toRemove);
         var kept = item.LostItemImage.Where(im => !removeIds.Contains(im.Id)).OrderBy(im => im.SortOrder).ToList();
+        // Float the explicitly-chosen cover (if it survived removal) to SortOrder 0.
+        if (vm.CoverImageId is int coverId)
+        {
+            var cover = kept.FirstOrDefault(im => im.Id == coverId);
+            if (cover is not null) { kept.Remove(cover); kept.Insert(0, cover); }
+        }
         var order = 0;
         foreach (var im in kept) im.SortOrder = order++;
         foreach (var url in newUrls)

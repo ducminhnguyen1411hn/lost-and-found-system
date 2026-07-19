@@ -40,6 +40,10 @@ public class LostItemEditViewModel
     public List<IFormFile>? NewImages { get; set; }
 
     public List<int> RemoveImageIds { get; set; } = new();
+
+    /// <summary>Existing-image Id the user picked as the cover (gets SortOrder 0). Defaults to the current cover.</summary>
+    public int? CoverImageId { get; set; }
+
     public IReadOnlyList<ImageItem> ExistingImages { get; set; } = Array.Empty<ImageItem>();
 
     public IEnumerable<SelectListItem> Categories { get; set; } = new List<SelectListItem>();

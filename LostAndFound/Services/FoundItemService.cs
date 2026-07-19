@@ -257,6 +257,7 @@ public class FoundItemService : IFoundItemService
                 .OrderBy(im => im.SortOrder)
                 .Select(im => new FoundItemEditViewModel.ImageItem { Id = im.Id, Url = im.Url })
                 .ToList(),
+            CoverImageId = item.FoundItemImage.OrderBy(im => im.SortOrder).Select(im => (int?)im.Id).FirstOrDefault(),
             HoldingType = (HoldingType)item.HoldingType
         };
     }
@@ -299,6 +300,12 @@ public class FoundItemService : IFoundItemService
         var toRemove = item.FoundItemImage.Where(im => removeIds.Contains(im.Id)).ToList();
         if (toRemove.Count > 0) _db.FoundItemImage.RemoveRange(toRemove);
         var kept = item.FoundItemImage.Where(im => !removeIds.Contains(im.Id)).OrderBy(im => im.SortOrder).ToList();
+        // Float the explicitly-chosen cover (if it survived removal) to SortOrder 0.
+        if (vm.CoverImageId is int coverId)
+        {
+            var cover = kept.FirstOrDefault(im => im.Id == coverId);
+            if (cover is not null) { kept.Remove(cover); kept.Insert(0, cover); }
+        }
         var order = 0;
         foreach (var im in kept) im.SortOrder = order++;
         foreach (var url in newUrls)

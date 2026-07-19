@@ -72,10 +72,18 @@
                                     <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 py-0 px-1 lh-1"
                                             data-remove-btn title="Xoá ảnh này">&times;</button>
                                 </div>
+                                @if (Model.ExistingImages.Count > 1)
+                                {
+                                    <div class="form-check mt-1">
+                                        <input class="form-check-input" type="radio" name="CoverImageId" value="@img.Id"
+                                               id="cover-@img.Id" data-cover-radio checked="@(img.Id == Model.CoverImageId)" />
+                                        <label class="form-check-label small" for="cover-@img.Id">Ảnh bìa</label>
+                                    </div>
+                                }
                             </div>
                         }
                     </div>
-                    <div class="form-text">Bấm × để đánh dấu xoá (bấm lại để hoàn tác). Ảnh bìa = ảnh đầu tiên còn lại. Tối đa 7 ảnh.</div>
+                    <div class="form-text">Bấm × để đánh dấu xoá (bấm lại để hoàn tác). Chọn ⦿ để đặt ảnh bìa. Tối đa 7 ảnh.</div>
                 }
             </div>
             <div class="mb-3">
@@ -97,6 +105,7 @@
             var flag = box.querySelector('[data-remove-flag]');
             var btn = box.querySelector('[data-remove-btn]');
             var thumb = box.querySelector('[data-thumb]');
+            var cover = document.querySelector('[data-cover-radio][value="' + flag.value + '"]');
             btn.addEventListener('click', function () {
                 flag.checked = !flag.checked;
                 thumb.style.opacity = flag.checked ? '0.35' : '1';
@@ -104,6 +113,16 @@
                 btn.classList.toggle('btn-secondary', flag.checked);
                 btn.innerHTML = flag.checked ? '&#8635;' : '&times;';
                 btn.title = flag.checked ? 'Hoàn tác' : 'Xoá ảnh này';
+                // A marked-for-removal image can't be the cover: disable its radio and,
+                // if it was the selected cover, hand it to the first remaining image.
+                if (cover) {
+                    cover.disabled = flag.checked;
+                    if (flag.checked && cover.checked) {
+                        cover.checked = false;
+                        var next = document.querySelector('[data-cover-radio]:not(:disabled)');
+                        if (next) next.checked = true;
+                    }
+                }
             });
         });
     </script>

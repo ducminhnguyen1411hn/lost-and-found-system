@@ -48,6 +48,9 @@ public class FoundItemEditViewModel
     /// <summary>Ids of existing images the user ticked to remove.</summary>
     public List<int> RemoveImageIds { get; set; } = new();
 
+    /// <summary>Existing-image Id the user picked as the cover (gets SortOrder 0). Defaults to the current cover.</summary>
+    public int? CoverImageId { get; set; }
+
     /// <summary>Existing images shown for management (cover first).</summary>
     public IReadOnlyList<ImageItem> ExistingImages { get; set; } = Array.Empty<ImageItem>();
 
