@@ -1,0 +1,21 @@
+@model BoardSearchViewModel
+@{
+    ViewData["Title"] = "Bài đăng của tôi";
+    ViewData["BoardAction"] = "Mine";
+    ViewData["BoardHeading"] = "Bài đăng của tôi";
+    ViewData["BoardEmpty"] = "Bạn chưa có bài đăng nào khớp bộ lọc.";
+    ViewData["ShowKindPill"] = !Model.Kind.HasValue;
+    ViewData["ShowStatus"] = true; // unlike the public board, your own posts can be in any status
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+
+<p class="text-muted small">
+    Mọi bài bạn đã đăng, ở <strong>mọi trạng thái</strong> — kể cả những bài không còn hiển thị trên bảng công khai
+    (đã duyệt yêu cầu nhận, đã trả, chờ bàn giao cho Staff).
+</p>
+
+<partial name="_BoardShell" model="Model" />

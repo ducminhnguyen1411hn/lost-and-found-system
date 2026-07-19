@@ -1,0 +1,86 @@
+@model MyClaimsSearchViewModel
+@using LostAndFound.Models.Enums
+@{
+    ViewData["Title"] = "Yêu cầu nhận lại của tôi";
+    var r = Model.Results;
+    string TabClass(ClaimStatus? s) => Model.Status == s ? "btn btn-primary btn-sm" : "btn btn-outline-secondary btn-sm";
+}
+
+<h1 class="h4 mb-3">Yêu cầu nhận lại của tôi</h1>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <a asp-action="My" class="@TabClass(null)">Tất cả</a>
+    <a asp-action="My" asp-route-Status="@ClaimStatus.Pending" class="@TabClass(ClaimStatus.Pending)">Đang chờ</a>
+    <a asp-action="My" asp-route-Status="@ClaimStatus.Accepted" class="@TabClass(ClaimStatus.Accepted)">Được chấp nhận</a>
+    <a asp-action="My" asp-route-Status="@ClaimStatus.Rejected" class="@TabClass(ClaimStatus.Rejected)">Bị từ chối</a>
+</div>
+
+<p class="text-muted small">@r.TotalCount yêu cầu</p>
+
+@if (r.Items.Count == 0)
+{
+    <p class="text-muted">Không có yêu cầu nào.</p>
+}
+else
+{
+    <div class="list-group mb-3">
+        @foreach (var c in r.Items)
+        {
+            string badge = c.Status switch
+            {
+                ClaimStatus.Pending => "<span class='badge bg-warning text-dark'>Đang chờ</span>",
+                ClaimStatus.Accepted => "<span class='badge bg-success'>Được chấp nhận</span>",
+                _ => "<span class='badge bg-secondary'>Bị từ chối</span>"
+            };
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                    <div>
+                        <a asp-action="Details" asp-route-id="@c.ClaimId" class="fw-semibold text-decoration-none">@c.ItemTitle</a>
+                        <div class="small text-muted">Gửi @AppTime.ToLocal(c.CreatedAt).ToString("dd/MM/yyyy HH:mm")</div>
+                        @if (c.Status == ClaimStatus.Rejected && !string.IsNullOrWhiteSpace(c.RejectReason))
+                        {
+                            <div class="small text-danger">Lý do: @c.RejectReason</div>
+                        }
+                        @if (c.Status == ClaimStatus.Accepted && c.ItemStatus == FoundItemStatus.ClaimAccepted)
+                        {
+                            <div class="small">Bàn giao: người giữ @(c.HolderConfirmed ? "✅" : "⏳") · bạn @(c.ClaimantConfirmed ? "✅" : "⏳")</div>
+                        }
+                        @if (c.ItemStatus == FoundItemStatus.Returned)
+                        {
+                            <div class="small text-success">Đã hoàn tất trả đồ ✅</div>
+                        }
+                    </div>
+                    <div class="text-end d-flex flex-column gap-2 align-items-end">
+                        @Html.Raw(badge)
+                        <a asp-action="Details" asp-route-id="@c.ClaimId" class="btn btn-outline-primary btn-sm">Trao đổi</a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (r.TotalPages > 1)
+    {
+        <nav aria-label="Phân trang">
+            <ul class="pagination pagination-sm justify-content-center">
+                <li class="page-item @(r.HasPrevious ? "" : "disabled")">
+                    <a class="page-link" asp-action="My" asp-route-Status="@Model.Status" asp-route-Page="@(r.Page - 1)">«</a>
+                </li>
+                @for (int p = 1; p <= r.TotalPages; p++)
+                {
+                    <li class="page-item @(p == r.Page ? "active" : "")">
+                        <a class="page-link" asp-action="My" asp-route-Status="@Model.Status" asp-route-Page="@p">@p</a>
+                    </li>
+                }
+                <li class="page-item @(r.HasNext ? "" : "disabled")">
+                    <a class="page-link" asp-action="My" asp-route-Status="@Model.Status" asp-route-Page="@(r.Page + 1)">»</a>
+                </li>
+            </ul>
+        </nav>
+    }
+}

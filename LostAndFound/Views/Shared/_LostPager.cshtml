@@ -1,0 +1,39 @@
+@model LostItemSearchViewModel
+@{
+    var r = Model.Results;
+}
+
+@if (r.TotalPages > 1)
+{
+    <nav aria-label="Phân trang">
+        <ul class="pagination justify-content-center">
+            <li class="page-item @(r.HasPrevious ? "" : "disabled")">
+                <a class="page-link"
+                   asp-controller="LostItems" asp-action="Index"
+                   asp-route-Keyword="@Model.Keyword" asp-route-CategoryId="@Model.CategoryId"
+                   asp-route-LocationId="@Model.LocationId" asp-route-Tag="@Model.Tag"
+                   asp-route-LostFrom="@(Model.LostFrom?.ToString("yyyy-MM-ddTHH:mm"))" asp-route-LostTo="@(Model.LostTo?.ToString("yyyy-MM-ddTHH:mm"))"
+                   asp-route-PageSize="@Model.PageSize" asp-route-Page="@(r.Page - 1)">«</a>
+            </li>
+            @for (int p = 1; p <= r.TotalPages; p++)
+            {
+                <li class="page-item @(p == r.Page ? "active" : "")">
+                    <a class="page-link"
+                       asp-controller="LostItems" asp-action="Index"
+                       asp-route-Keyword="@Model.Keyword" asp-route-CategoryId="@Model.CategoryId"
+                       asp-route-LocationId="@Model.LocationId" asp-route-Tag="@Model.Tag"
+                       asp-route-LostFrom="@(Model.LostFrom?.ToString("yyyy-MM-ddTHH:mm"))" asp-route-LostTo="@(Model.LostTo?.ToString("yyyy-MM-ddTHH:mm"))"
+                       asp-route-PageSize="@Model.PageSize" asp-route-Page="@p">@p</a>
+                </li>
+            }
+            <li class="page-item @(r.HasNext ? "" : "disabled")">
+                <a class="page-link"
+                   asp-controller="LostItems" asp-action="Index"
+                   asp-route-Keyword="@Model.Keyword" asp-route-CategoryId="@Model.CategoryId"
+                   asp-route-LocationId="@Model.LocationId" asp-route-Tag="@Model.Tag"
+                   asp-route-LostFrom="@(Model.LostFrom?.ToString("yyyy-MM-ddTHH:mm"))" asp-route-LostTo="@(Model.LostTo?.ToString("yyyy-MM-ddTHH:mm"))"
+                   asp-route-PageSize="@Model.PageSize" asp-route-Page="@(r.Page + 1)">»</a>
+            </li>
+        </ul>
+    </nav>
+}

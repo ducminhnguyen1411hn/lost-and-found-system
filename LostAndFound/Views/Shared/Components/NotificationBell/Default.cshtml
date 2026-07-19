@@ -1,0 +1,40 @@
+@model LostAndFound.ViewComponents.NotificationBellViewComponent.BellModel
+
+<div class="dropdown">
+    <a class="nav-link text-dark position-relative" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        🔔
+        @if (Model.Unread > 0)
+        {
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                @(Model.Unread > 9 ? "9+" : Model.Unread.ToString())
+            </span>
+        }
+    </a>
+    <ul class="dropdown-menu dropdown-menu-end shadow" style="min-width: 320px;">
+        <li class="dropdown-header d-flex justify-content-between align-items-center">
+            <span>Thông báo</span>
+            <a class="small" asp-controller="Notifications" asp-action="Index">Xem tất cả</a>
+        </li>
+        <li><hr class="dropdown-divider" /></li>
+        @if (Model.Recent.Count == 0)
+        {
+            <li><span class="dropdown-item-text text-muted small">Chưa có thông báo</span></li>
+        }
+        else
+        {
+            @foreach (var n in Model.Recent)
+            {
+                <li>
+                    <a class="dropdown-item @(n.IsRead ? "" : "fw-semibold")" href="@(n.LinkUrl ?? "#")">
+                        <div>@n.Title</div>
+                        @if (!string.IsNullOrWhiteSpace(n.Message))
+                        {
+                            <div class="small text-muted text-truncate" style="max-width: 280px;">@n.Message</div>
+                        }
+                        <div class="small text-muted">@AppTime.ToLocal(n.CreatedAt).ToString("dd/MM HH:mm")</div>
+                    </a>
+                </li>
+            }
+        }
+    </ul>
+</div>

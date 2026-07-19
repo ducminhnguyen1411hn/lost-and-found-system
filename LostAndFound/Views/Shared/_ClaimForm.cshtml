@@ -1,0 +1,37 @@
+@model ClaimCreateViewModel
+
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+<input type="hidden" asp-for="FoundItemId" />
+
+<div class="mb-3">
+    <label asp-for="VerificationDetails" class="form-label"></label>
+    <textarea asp-for="VerificationDetails" class="form-control" rows="5"
+              placeholder="Mô tả chi tiết chỉ chủ nhân mới biết: vết xước, sticker, số serial, hình nền điện thoại, thứ đang ở trong ngăn nhỏ...&#10;Càng cụ thể càng dễ được chấp nhận."></textarea>
+    <span asp-validation-for="VerificationDetails" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="EvidenceImages" class="form-label"></label>
+    <input asp-for="EvidenceImages" type="file" class="form-control" multiple accept="image/*" />
+    <div class="form-text">Tối đa 5 ảnh. Ví dụ: hoá đơn, ảnh chụp cùng món đồ, ảnh số serial.</div>
+    <span asp-validation-for="EvidenceImages" class="text-danger"></span>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <label asp-for="ContactPhone" class="form-label"></label>
+        <input asp-for="ContactPhone" class="form-control" />
+        <span asp-validation-for="ContactPhone" class="text-danger"></span>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="ContactEmail" class="form-label"></label>
+        <input asp-for="ContactEmail" class="form-control" />
+        <span asp-validation-for="ContactEmail" class="text-danger"></span>
+    </div>
+    <div class="col-12">
+        <div class="form-text">
+            Điền sẵn từ hồ sơ của bạn — sửa hoặc xoá tuỳ ý. <strong>Chỉ người đang giữ món đồ nhìn thấy</strong>,
+            không hiển thị công khai. Để trống cũng được: bạn vẫn trao đổi được qua khung chat của yêu cầu.
+        </div>
+    </div>
+</div>

@@ -24,7 +24,7 @@ $scr.Options.ScriptData = $true          # data only (INSERTs, with IDENTITY_INS
 $scr.Options.NoCommandTerminator = $false
 
 # FK-safe order: roles/users, lookups, then the FoundItem graph, then audit.
-$tables = "AspNetRoles","AspNetUsers","AspNetUserRoles","Category","Location","Tag","FoundItem","FoundItemImage","FoundItemTag","AuditLog"
+$tables = "AspNetRoles","AspNetUsers","AspNetUserRoles","Category","Location","Tag","FoundItem","FoundItemImage","FoundItemTag","LostItem","LostItemImage","LostItemTag","AuditLog"
 $objs = [Microsoft.SqlServer.Management.Smo.SqlSmoObject[]]($tables | ForEach-Object { $db.Tables[$_] })
 
 $header = @"

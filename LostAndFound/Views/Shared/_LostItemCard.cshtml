@@ -1,0 +1,45 @@
+@model LostItemListItemViewModel
+
+<div class="card h-100 shadow-sm">
+    <div class="position-relative">
+        @if (!string.IsNullOrEmpty(Model.CoverImagePath))
+        {
+            <img src="@Model.CoverImagePath" class="card-img-top" alt="@Model.Title" style="height:180px;object-fit:cover;" />
+        }
+        else
+        {
+            <div class="bg-light d-flex align-items-center justify-content-center text-muted" style="height:180px;">
+                <span>Không có ảnh</span>
+            </div>
+        }
+        @if (Model.ImageCount > 1)
+        {
+            <span class="badge bg-dark position-absolute top-0 end-0 m-2">📷 @Model.ImageCount</span>
+        }
+        <span class="badge bg-warning text-dark position-absolute top-0 start-0 m-2">Đang tìm</span>
+    </div>
+    <div class="card-body d-flex flex-column">
+        <h5 class="card-title">
+            <a asp-controller="LostItems" asp-action="Details" asp-route-id="@Model.Id" class="text-decoration-none">@Model.Title</a>
+        </h5>
+        <p class="card-text small text-muted mb-1">
+            <span class="me-2">🏷 @Model.CategoryName</span>
+            <span>📍 @Model.LocationName</span>
+        </p>
+        <p class="card-text small text-muted mb-2">🕒 Mất lúc @AppTime.ToLocal(Model.LostAt).ToString("dd/MM/yyyy HH:mm")</p>
+        @if (!string.IsNullOrEmpty(Model.ShortDescription))
+        {
+            <p class="card-text small mb-2">@Model.ShortDescription</p>
+        }
+        @if (Model.DisplayTags.Count > 0)
+        {
+            <div class="mb-2">
+                @foreach (var t in Model.DisplayTags)
+                {
+                    <span class="badge bg-secondary me-1">@t</span>
+                }
+            </div>
+        }
+        <a asp-controller="LostItems" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary mt-auto">Xem chi tiết</a>
+    </div>
+</div>

@@ -1,10 +1,15 @@
 using LostAndFound.Models.Entities;
+using LostAndFound.Models.Enums;
 using LostAndFound.Models.ViewModels.Admin;
 
 namespace LostAndFound.Services.Interfaces;
 
 public interface IAdminService
 {
+    // Post Management (moderating every user post: found + lost)
+    Task<List<AdminPostViewModel>> GetAllPostsAsync();
+    Task<bool> DeletePostAsync(ItemKind kind, int id, string actorUserId);
+
     // Category Management
     Task<List<CategoryViewModel>> GetAllCategoriesAsync();
     Task<CategoryViewModel?> GetCategoryByIdAsync(int id);

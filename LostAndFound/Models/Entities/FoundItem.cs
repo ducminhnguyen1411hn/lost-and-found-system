@@ -36,6 +36,10 @@ public partial class FoundItem
 
     public DateTime CreatedAt { get; set; }
 
+    public DateTime? HolderConfirmedAt { get; set; }
+
+    public DateTime? ClaimantConfirmedAt { get; set; }
+
     public virtual Category Category { get; set; } = null!;
 
     public virtual ICollection<Claim> Claim { get; set; } = new List<Claim>();

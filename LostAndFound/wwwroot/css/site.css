@@ -20,3 +20,7 @@ html {
 body {
   margin-bottom: 60px;
 }
+/* Bootstrap 5.1 ships no object-fit utilities (they arrive in 5.3). Board cards put the image in a
+   fixed .ratio-4x3 box, and .ratio > * is stretched to 100%/100% — without object-fit the photo is
+   distorted. Same class name as the future Bootstrap utility, so this is a no-op after an upgrade. */
+.object-fit-cover { object-fit: cover; }

@@ -14,4 +14,6 @@ public partial class Tag
     public virtual ICollection<FoundItemTag> FoundItemTag { get; set; } = new List<FoundItemTag>();
 
     public virtual ICollection<LostAlertTag> LostAlertTag { get; set; } = new List<LostAlertTag>();
+
+    public virtual ICollection<LostItemTag> LostItemTag { get; set; } = new List<LostItemTag>();
 }

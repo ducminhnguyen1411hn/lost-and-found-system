@@ -1,0 +1,30 @@
+@model ClaimCreateViewModel
+@{ ViewData["Title"] = "Yêu cầu nhận lại"; }
+
+<a asp-controller="FoundItems" asp-action="Details" asp-route-id="@Model.FoundItemId" class="text-decoration-none">&larr; Quay lại món đồ</a>
+
+<h1 class="h4 my-3">Yêu cầu nhận lại: @Model.ItemTitle</h1>
+
+<div class="row">
+    <div class="col-md-4 mb-3">
+        @if (!string.IsNullOrWhiteSpace(Model.ItemCoverImage))
+        {
+            <img src="@Model.ItemCoverImage" class="img-fluid rounded shadow-sm" alt="@Model.ItemTitle" />
+        }
+        else
+        {
+            <div class="bg-light d-flex align-items-center justify-content-center text-muted rounded" style="height:200px;">Không có ảnh</div>
+        }
+    </div>
+    <div class="col-md-8">
+        <div class="alert alert-info small">
+            Mô tả đặc điểm mà <strong>chỉ chủ nhân mới biết</strong>. Thông tin & ảnh bằng chứng chỉ người giữ món đồ nhìn thấy, không hiển thị công khai.
+        </div>
+        <form asp-action="Create" method="post" enctype="multipart/form-data">
+            <partial name="_ClaimForm" model="Model" />
+            <button type="submit" class="btn btn-primary">Gửi yêu cầu</button>
+        </form>
+    </div>
+</div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

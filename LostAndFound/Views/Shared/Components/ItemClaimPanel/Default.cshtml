@@ -1,0 +1,72 @@
+@model ItemClaimPanelViewModel
+@using LostAndFound.Models.Enums
+
+@* Claimant entry point *@
+@if (Model.CanClaim)
+{
+    <a asp-controller="Claims" asp-action="Create" asp-route-foundItemId="@Model.FoundItemId" class="btn btn-primary">
+        📩 Yêu cầu nhận lại
+    </a>
+}
+
+@* Holder: pending claims to accept/reject (private data — only rendered for holder/admin) *@
+@if (Model.IsHolderView && Model.PendingClaims.Count > 0)
+{
+    <div class="card border-primary mt-3">
+        @* bg-*-subtle utilities are Bootstrap 5.3; this project is on 5.1 (they rendered as no-ops).
+           bg-light + the card's border-* colour carries the same distinction on 5.1. *@
+        <div class="card-header bg-light">Yêu cầu nhận lại đang chờ (@Model.PendingClaims.Count)</div>
+        <div class="card-body">
+            @foreach (var c in Model.PendingClaims)
+            {
+                <div class="border-bottom pb-3 mb-3">
+                    <div class="d-flex justify-content-between">
+                        <strong>@c.ClaimantName</strong>
+                        <span class="small text-muted">@AppTime.ToLocal(c.CreatedAt).ToString("dd/MM/yyyy HH:mm")</span>
+                    </div>
+                    <p class="mb-2">@c.VerificationDetails</p>
+                    @if (c.EvidenceImagePaths.Count > 0)
+                    {
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            @foreach (var url in c.EvidenceImagePaths)
+                            {
+                                <a href="@url" target="_blank"><img src="@url" style="height:80px;width:80px;object-fit:cover;" class="rounded border" alt="bằng chứng" /></a>
+                            }
+                        </div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(c.ContactPhone) || !string.IsNullOrWhiteSpace(c.ContactEmail))
+                    {
+                        <div class="small text-muted mb-2">
+                            📞 @(string.IsNullOrWhiteSpace(c.ContactPhone) ? "—" : c.ContactPhone)
+                            · ✉️ @(string.IsNullOrWhiteSpace(c.ContactEmail) ? "—" : c.ContactEmail)
+                        </div>
+                    }
+                    <div class="d-flex gap-2">
+                        <a asp-controller="Claims" asp-action="Details" asp-route-id="@c.ClaimId"
+                           class="btn btn-outline-primary btn-sm">Trao đổi</a>
+                        <form asp-controller="Claims" asp-action="Accept" method="post"
+                              onsubmit="return confirm('Chấp nhận yêu cầu này? Các yêu cầu khác trên món đồ sẽ tự động bị từ chối.');">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="claimId" value="@c.ClaimId" />
+                            <input type="hidden" name="foundItemId" value="@Model.FoundItemId" />
+                            <button type="submit" class="btn btn-success btn-sm">Chấp nhận</button>
+                        </form>
+                        <form asp-controller="Claims" asp-action="Reject" method="post" class="d-flex gap-1">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="ClaimId" value="@c.ClaimId" />
+                            <input type="hidden" name="foundItemId" value="@Model.FoundItemId" />
+                            <input type="text" name="RejectReason" class="form-control form-control-sm" placeholder="Lý do từ chối" required />
+                            <button type="submit" class="btn btn-outline-danger btn-sm">Từ chối</button>
+                        </form>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@* Handover panel — shared with the claim page so the two can't drift. Null = must not render. *@
+@if (Model.Handover is not null)
+{
+    <partial name="_HandoverPanel" model="Model.Handover" />
+}

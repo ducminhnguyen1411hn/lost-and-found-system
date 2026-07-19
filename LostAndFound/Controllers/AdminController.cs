@@ -1,3 +1,4 @@
+using LostAndFound.Models.Enums;
 using LostAndFound.Models.ViewModels.Admin;
 using LostAndFound.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -311,10 +312,38 @@ public class AdminController : Controller
 
     #endregion
 
+    #region Post Management
+
+    // GET: /Admin/Posts
+    public async Task<IActionResult> Posts()
+    {
+        var model = await _adminService.GetAllPostsAsync();
+        return View(model);
+    }
+
+    // POST: /Admin/Posts/Delete
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeletePost(ItemKind kind, int id)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+        var result = await _adminService.DeletePostAsync(kind, id, userId);
+        if (!result)
+        {
+            TempData["ErrorMessage"] = "Không tìm thấy bài đăng (có thể đã bị xoá).";
+            return RedirectToAction(nameof(Posts));
+        }
+
+        TempData["SuccessMessage"] = "Đã gỡ bài đăng và toàn bộ dữ liệu liên quan.";
+        return RedirectToAction(nameof(Posts));
+    }
+
+    #endregion
+
     #region Audit Log
 
     // GET: /Admin/AuditLog
-    public async Task<IActionResult> AuditLog(AuditLogFilterViewModel filter)
+    public async Task<IActionResult> AuditLog([FromQuery] AuditLogFilterViewModel filter)
     {
         ViewBag.Filter = filter;
         var model = await _adminService.GetAuditLogsAsync(filter);

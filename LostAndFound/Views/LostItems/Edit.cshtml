@@ -1,0 +1,129 @@
+@model LostItemEditViewModel
+@{
+    ViewData["Title"] = "Sửa bài đăng";
+    var nowMax = AppTime.LocalNow.ToString("yyyy-MM-ddTHH:mm");
+}
+
+<h1 class="h3 mb-3">Sửa bài đăng (đồ bị mất)</h1>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="Id" />
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="mb-3">
+                <label asp-for="Title" class="form-label"></label>
+                <input asp-for="Title" class="form-control" />
+                <span asp-validation-for="Title" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label"></label>
+                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+
+            <div class="row">
+                <div class="col-sm-6 mb-3">
+                    <label asp-for="CategoryId" class="form-label"></label>
+                    <select asp-for="CategoryId" asp-items="Model.Categories" class="form-select">
+                        <option value="">-- Chọn danh mục --</option>
+                    </select>
+                    <span asp-validation-for="CategoryId" class="text-danger"></span>
+                </div>
+                <div class="col-sm-6 mb-3">
+                    <label asp-for="LocationId" class="form-label"></label>
+                    <select asp-for="LocationId" asp-items="Model.Locations" class="form-select">
+                        <option value="">-- Chọn khu vực --</option>
+                    </select>
+                    <span asp-validation-for="LocationId" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="LostAt" class="form-label"></label>
+                <input asp-for="LostAt" type="datetime-local" max="@nowMax" class="form-control" />
+                <span asp-validation-for="LostAt" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="TagsRaw" class="form-label"></label>
+                <partial name="_TagInput" model="@Model.TagsRaw" />
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="mb-3">
+                <label class="form-label d-block">Ảnh hiện tại</label>
+                @if (Model.ExistingImages.Count == 0)
+                {
+                    <div class="text-muted small mb-2">Chưa có ảnh</div>
+                }
+                else
+                {
+                    <div class="row row-cols-3 g-2 mb-1" id="existingImages">
+                        @foreach (var img in Model.ExistingImages)
+                        {
+                            <div class="col">
+                                <div class="position-relative" data-img>
+                                    <img src="@img.Url" class="img-fluid rounded w-100" style="height:70px;object-fit:cover;" alt="ảnh" data-thumb />
+                                    <input type="checkbox" name="RemoveImageIds" value="@img.Id" class="d-none" data-remove-flag />
+                                    <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 py-0 px-1 lh-1"
+                                            data-remove-btn title="Xoá ảnh này">&times;</button>
+                                </div>
+                                @if (Model.ExistingImages.Count > 1)
+                                {
+                                    <div class="form-check mt-1">
+                                        <input class="form-check-input" type="radio" name="CoverImageId" value="@img.Id"
+                                               id="cover-@img.Id" data-cover-radio checked="@(img.Id == Model.CoverImageId)" />
+                                        <label class="form-check-label small" for="cover-@img.Id">Ảnh bìa</label>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <div class="form-text">Bấm × để đánh dấu xoá (bấm lại để hoàn tác). Chọn ⦿ để đặt ảnh bìa. Tối đa 7 ảnh.</div>
+                }
+            </div>
+            <div class="mb-3">
+                <label asp-for="NewImages" class="form-label"></label>
+                <input asp-for="NewImages" type="file" accept="image/*" multiple class="form-control" />
+                <span asp-validation-for="NewImages" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Lưu</button>
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Huỷ</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.querySelectorAll('#existingImages [data-img]').forEach(function (box) {
+            var flag = box.querySelector('[data-remove-flag]');
+            var btn = box.querySelector('[data-remove-btn]');
+            var thumb = box.querySelector('[data-thumb]');
+            var cover = document.querySelector('[data-cover-radio][value="' + flag.value + '"]');
+            btn.addEventListener('click', function () {
+                flag.checked = !flag.checked;
+                thumb.style.opacity = flag.checked ? '0.35' : '1';
+                btn.classList.toggle('btn-danger', !flag.checked);
+                btn.classList.toggle('btn-secondary', flag.checked);
+                btn.innerHTML = flag.checked ? '&#8635;' : '&times;';
+                btn.title = flag.checked ? 'Hoàn tác' : 'Xoá ảnh này';
+                // A marked-for-removal image can't be the cover: disable its radio and,
+                // if it was the selected cover, hand it to the first remaining image.
+                if (cover) {
+                    cover.disabled = flag.checked;
+                    if (flag.checked && cover.checked) {
+                        cover.checked = false;
+                        var next = document.querySelector('[data-cover-radio]:not(:disabled)');
+                        if (next) next.checked = true;
+                    }
+                }
+            });
+        });
+    </script>
+}

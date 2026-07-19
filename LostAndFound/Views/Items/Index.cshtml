@@ -1,0 +1,19 @@
+@model BoardSearchViewModel
+@{
+    ViewData["Title"] = "Bảng đồ";
+    ViewData["BoardAction"] = "Index";
+    ViewData["BoardHeading"] = "Bảng đồ";
+    ViewData["ShowKindPill"] = !Model.Kind.HasValue; // the pill only informs when both sides are mixed
+    ViewData["ShowStatus"] = false;                  // the public board is Open-only, so a status badge is noise
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+}
+
+<partial name="_BoardShell" model="Model" />

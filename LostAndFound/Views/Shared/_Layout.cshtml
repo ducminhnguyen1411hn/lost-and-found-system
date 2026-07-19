@@ -12,20 +12,23 @@
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="FoundItems" asp-action="Index">LostAndFound</a>
+                <a class="navbar-brand" asp-area="" asp-controller="Items" asp-action="Index">LostAndFound</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Items" asp-action="Index">Bảng đồ</a>
+                        </li>
                         @if (User.Identity is not null && User.Identity.IsAuthenticated && !User.IsInRole("Admin"))
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="FoundItems" asp-action="Index">Đồ nhặt được</a>
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Items" asp-action="Mine">Bài đăng của tôi</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="FoundItems" asp-action="Create">Đăng đồ nhặt</a>
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Claims" asp-action="My">Yêu cầu của tôi</a>
                             </li>
                         }
                         @if (User.IsInRole("Admin"))
@@ -39,6 +42,7 @@
                                     <li><a class="dropdown-item" asp-area="" asp-controller="Admin" asp-action="Categories">Danh mục</a></li>
                                     <li><a class="dropdown-item" asp-area="" asp-controller="Admin" asp-action="Locations">Địa điểm</a></li>
                                     <li><a class="dropdown-item" asp-area="" asp-controller="Admin" asp-action="Tags">Thẻ</a></li>
+                                    <li><a class="dropdown-item" asp-area="" asp-controller="Admin" asp-action="Posts">Bài đăng</a></li>
                                     <li><a class="dropdown-item" asp-area="" asp-controller="Admin" asp-action="Unclaimed">Đồ chưa nhận</a></li>
                                     <li><a class="dropdown-item" asp-area="" asp-controller="Admin" asp-action="AuditLog">Nhật ký</a></li>
                                     <li><hr class="dropdown-divider"></li>
@@ -46,9 +50,14 @@
                                 </ul>
                             </li>
                         }
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Chính sách</a>
-                        </li>
+                    </ul>
+                    <ul class="navbar-nav">
+                        @if (User.Identity is not null && User.Identity.IsAuthenticated)
+                        {
+                            <li class="nav-item">
+                                @await Component.InvokeAsync("NotificationBell")
+                            </li>
+                        }
                     </ul>
                     <partial name="_LoginPartial" />
                 </div>
