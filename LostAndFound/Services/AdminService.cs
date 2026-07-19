@@ -11,11 +11,13 @@ public class AdminService : IAdminService
 {
     private readonly ApplicationDbContext _db;
     private readonly IAuditService _auditService;
+    private readonly INotificationService _notificationService;
 
-    public AdminService(ApplicationDbContext db, IAuditService auditService)
+    public AdminService(ApplicationDbContext db, IAuditService auditService, INotificationService notificationService)
     {
         _db = db;
         _auditService = auditService;
+        _notificationService = notificationService;
     }
 
     #region Category Management
@@ -491,6 +493,137 @@ public class AdminService : IAdminService
 
         return true;
     }
+
+    #endregion
+
+    #region Post Management (moderating every user post: found + lost)
+
+    public async Task<List<AdminPostViewModel>> GetAllPostsAsync()
+    {
+        var found = (await _db.FoundItem
+                .Select(f => new
+                {
+                    f.Id,
+                    f.Title,
+                    Category = f.Category.Name,
+                    Location = f.Location.Name,
+                    Owner = f.ReporterUser.FullName ?? f.ReporterUser.Email,
+                    f.Status,
+                    Claims = f.Claim.Count,
+                    f.CreatedAt
+                })
+                .ToListAsync())
+            .Select(x => new AdminPostViewModel
+            {
+                Id = x.Id,
+                Kind = ItemKind.Found,
+                Title = x.Title,
+                CategoryName = x.Category,
+                LocationName = x.Location,
+                OwnerName = x.Owner ?? "?",
+                StatusText = FoundStatusText(x.Status),
+                ClaimCount = x.Claims,
+                CreatedAt = x.CreatedAt
+            });
+
+        var lostRaw = await _db.LostItem
+            .Select(l => new
+            {
+                l.Id,
+                l.Title,
+                Category = l.Category.Name,
+                Location = l.Location.Name,
+                l.OwnerUserId,
+                l.Status,
+                l.CreatedAt
+            })
+            .ToListAsync();
+
+        // LostItem has no user navigation (the FK is a bare string) — batch-resolve owner names.
+        var ownerIds = lostRaw.Select(l => l.OwnerUserId).Distinct().ToList();
+        var ownerNames = await _db.Users
+            .Where(u => ownerIds.Contains(u.Id))
+            .Select(u => new { u.Id, Name = u.FullName ?? u.Email })
+            .ToDictionaryAsync(u => u.Id, u => u.Name);
+
+        var lost = lostRaw.Select(x => new AdminPostViewModel
+        {
+            Id = x.Id,
+            Kind = ItemKind.Lost,
+            Title = x.Title,
+            CategoryName = x.Category,
+            LocationName = x.Location,
+            OwnerName = (ownerNames.TryGetValue(x.OwnerUserId, out var n) ? n : null) ?? "?",
+            StatusText = LostStatusText(x.Status),
+            ClaimCount = 0,
+            CreatedAt = x.CreatedAt
+        });
+
+        return found.Concat(lost).OrderByDescending(p => p.CreatedAt).ToList();
+    }
+
+    public async Task<bool> DeletePostAsync(ItemKind kind, int id, string actorUserId)
+    {
+        await using var tx = await _db.Database.BeginTransactionAsync();
+
+        if (kind == ItemKind.Found)
+        {
+            var meta = await _db.FoundItem.AsNoTracking()
+                .Where(f => f.Id == id)
+                .Select(f => new { f.ReporterUserId, f.Title })
+                .FirstOrDefaultAsync();
+            if (meta is null) return false;
+
+            // FoundItem is blocked by two NO-ACTION parents (ThankYou, Claim); delete them first.
+            // Deleting Claim cascades ClaimImage + ClaimMessage; deleting FoundItem cascades its images + tags.
+            await _db.ThankYou.Where(t => t.FoundItemId == id).ExecuteDeleteAsync();
+            await _db.Claim.Where(c => c.FoundItemId == id).ExecuteDeleteAsync();
+            await _db.FoundItem.Where(f => f.Id == id).ExecuteDeleteAsync();
+
+            await _auditService.LogAsync(actorUserId, "Deleted", "FoundItem", id.ToString(),
+                null, null, $"Admin gỡ bài đăng: {meta.Title}", isPublic: false);
+            await _notificationService.PushAsync(meta.ReporterUserId, "PostRemoved",
+                "Bài đăng đã bị gỡ", $"Bài \"{meta.Title}\" của bạn đã bị quản trị viên gỡ.", "/Items");
+        }
+        else
+        {
+            var meta = await _db.LostItem.AsNoTracking()
+                .Where(l => l.Id == id)
+                .Select(l => new { l.OwnerUserId, l.Title })
+                .FirstOrDefaultAsync();
+            if (meta is null) return false;
+
+            // LostItem has no NO-ACTION children — deleting it cascades its images + tags at the DB level.
+            await _db.LostItem.Where(l => l.Id == id).ExecuteDeleteAsync();
+
+            await _auditService.LogAsync(actorUserId, "Deleted", "LostItem", id.ToString(),
+                null, null, $"Admin gỡ bài đăng: {meta.Title}", isPublic: false);
+            await _notificationService.PushAsync(meta.OwnerUserId, "PostRemoved",
+                "Bài đăng đã bị gỡ", $"Bài \"{meta.Title}\" của bạn đã bị quản trị viên gỡ.", "/Items");
+        }
+
+        await tx.CommitAsync();
+        return true;
+    }
+
+    private static string FoundStatusText(int status) => (FoundItemStatus)status switch
+    {
+        FoundItemStatus.PendingDropoff => "Chờ bàn giao",
+        FoundItemStatus.Open => "Đang mở",
+        FoundItemStatus.ClaimAccepted => "Đã duyệt nhận",
+        FoundItemStatus.Returned => "Đã trả",
+        FoundItemStatus.Unclaimed => "Chưa có người nhận",
+        FoundItemStatus.Disposed => "Đã thanh lý",
+        _ => "?"
+    };
+
+    private static string LostStatusText(int status) => (LostItemStatus)status switch
+    {
+        LostItemStatus.Open => "Đang tìm",
+        LostItemStatus.Resolved => "Đã tìm thấy",
+        LostItemStatus.Cancelled => "Đã huỷ",
+        _ => "?"
+    };
 
     #endregion
 

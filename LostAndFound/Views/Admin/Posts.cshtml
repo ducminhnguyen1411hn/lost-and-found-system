@@ -1,0 +1,98 @@
+@using LostAndFound.Models.Enums
+@model List<LostAndFound.Models.ViewModels.Admin.AdminPostViewModel>
+@{
+    ViewData["Title"] = "Quản lý bài đăng";
+}
+
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-1 text-dark">Quản lý bài đăng</h3>
+            <p class="text-muted mb-0">Toàn bộ bài đăng của người dùng (đồ nhặt được &amp; đồ bị mất). Gỡ bài sẽ xoá luôn ảnh, thẻ và các yêu cầu nhận liên quan.</p>
+        </div>
+        <a asp-controller="Items" asp-action="Create" class="btn btn-primary text-nowrap" style="border-radius: 6px;">+ Đăng bài hộ</a>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show mb-4 border-0" role="alert" style="background-color: #dcfce7; color: #166534; border-radius: 6px;">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show mb-4 border-0" role="alert" style="background-color: #fee2e2; color: #991b1b; border-radius: 6px;">
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="card border-0 shadow-sm" style="border-radius: 8px;">
+            <div class="card-body text-center py-5">
+                <h5 class="fw-bold text-dark">Chưa có bài đăng nào</h5>
+                <p class="text-muted mb-0">Khi người dùng đăng đồ nhặt được hoặc đồ bị mất, chúng sẽ hiện ở đây.</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="text-muted small mb-2">Tổng: @Model.Count bài</div>
+        <div class="table-responsive">
+            <table class="table align-middle" style="border-top: 1px solid #e5e7eb;">
+                <thead>
+                    <tr class="text-muted" style="font-size: 0.9rem;">
+                        <th class="fw-normal border-0 border-bottom pb-3">Tiêu đề</th>
+                        <th class="fw-normal border-0 border-bottom pb-3">Loại</th>
+                        <th class="fw-normal border-0 border-bottom pb-3">Danh mục</th>
+                        <th class="fw-normal border-0 border-bottom pb-3">Nơi</th>
+                        <th class="fw-normal border-0 border-bottom pb-3">Người đăng</th>
+                        <th class="fw-normal border-0 border-bottom pb-3">Trạng thái</th>
+                        <th class="fw-normal border-0 border-bottom pb-3">Ngày đăng</th>
+                        <th class="fw-normal border-0 border-bottom pb-3 text-end">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody style="font-size: 0.95rem;">
+                    @foreach (var item in Model)
+                    {
+                        var isFound = item.Kind == ItemKind.Found;
+                        var detailsController = isFound ? "FoundItems" : "LostItems";
+                        <tr>
+                            <td class="py-3 border-bottom fw-medium text-dark">
+                                @item.Title
+                                @if (item.ClaimCount > 0)
+                                {
+                                    <span class="badge bg-danger ms-1" style="border-radius: 4px;" title="Số yêu cầu nhận sẽ bị xoá theo">@item.ClaimCount yêu cầu</span>
+                                }
+                            </td>
+                            <td class="py-3 border-bottom">
+                                <span class="badge @(isFound ? "bg-info" : "bg-warning") text-dark" style="border-radius: 4px;">
+                                    @(isFound ? "Nhặt được" : "Bị mất")
+                                </span>
+                            </td>
+                            <td class="py-3 border-bottom">@item.CategoryName</td>
+                            <td class="py-3 border-bottom">@item.LocationName</td>
+                            <td class="py-3 border-bottom">@item.OwnerName</td>
+                            <td class="py-3 border-bottom">@item.StatusText</td>
+                            <td class="py-3 border-bottom text-muted" style="font-size: 0.9rem;">@AppTime.ToLocal(item.CreatedAt).ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="py-3 border-bottom text-end text-nowrap">
+                                <a asp-controller="@detailsController" asp-action="Details" asp-route-id="@item.Id"
+                                   class="btn btn-sm btn-outline-secondary px-3 me-1" style="border-radius: 6px;">Xem</a>
+                                <form asp-action="DeletePost" method="post" class="d-inline"
+                                      onsubmit="return confirm('@(item.ClaimCount > 0 ? $"Bài này có {item.ClaimCount} yêu cầu nhận — tất cả sẽ bị xoá theo. Gỡ hẳn?" : "Gỡ hẳn bài đăng này? Không hoàn tác được.")');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="kind" value="@item.Kind" />
+                                    <input type="hidden" name="id" value="@item.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger px-3" style="border-radius: 6px; font-weight: 500;">Gỡ</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
