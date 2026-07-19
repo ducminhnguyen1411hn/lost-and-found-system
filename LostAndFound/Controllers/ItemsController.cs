@@ -32,12 +32,24 @@ public class ItemsController : Controller
 
     private string Uid => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
+    /// <summary>True when an admin has flagged the signed-in user IsPostingBlocked. The unified refactor
+    /// moved creation here from FoundItemsController but left this guard behind, so blocked users could
+    /// still post through the merged form — now gates the create actions AND hides the board's post button.
+    /// Anonymous-safe: the public board calls this too.</summary>
+    private async Task<bool> IsPostingBlockedAsync()
+    {
+        if (User.Identity?.IsAuthenticated != true) return false;
+        var user = await _db.Users.FindAsync(Uid);
+        return user is not null && user.IsPostingBlocked;
+    }
+
     [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> Index(BoardSearchViewModel q)
     {
         q.Results = await _board.SearchAsync(q);
         await FillLookupsAsync(l => q.Categories = l, l => q.Locations = l);
+        ViewData["IsPostingBlocked"] = await IsPostingBlockedAsync();
         return View(q);
     }
 
@@ -49,6 +61,7 @@ public class ItemsController : Controller
     {
         q.Results = await _board.SearchAsync(q, Uid);
         await FillLookupsAsync(l => q.Categories = l, l => q.Locations = l);
+        ViewData["IsPostingBlocked"] = await IsPostingBlockedAsync();
         return View(q);
     }
 
@@ -56,6 +69,12 @@ public class ItemsController : Controller
     [HttpGet]
     public async Task<IActionResult> Create(ItemKind kind = ItemKind.Found)
     {
+        if (await IsPostingBlockedAsync())
+        {
+            TempData["ErrorMessage"] = "Bạn đã bị chặn đăng bài. Vui lòng liên hệ quản trị viên.";
+            return RedirectToAction(nameof(Index));
+        }
+
         var vm = new ItemCreateViewModel { Kind = kind };
         await FillLookupsAsync(l => vm.Categories = l, l => vm.Locations = l);
         return View(vm);
@@ -66,6 +85,12 @@ public class ItemsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(ItemCreateViewModel vm)
     {
+        if (await IsPostingBlockedAsync())
+        {
+            TempData["ErrorMessage"] = "Bạn đã bị chặn đăng bài. Vui lòng liên hệ quản trị viên.";
+            return RedirectToAction(nameof(Index));
+        }
+
         if (!ModelState.IsValid)
         {
             await FillLookupsAsync(l => vm.Categories = l, l => vm.Locations = l);

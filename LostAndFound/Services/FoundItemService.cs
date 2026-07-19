@@ -33,6 +33,12 @@ public class FoundItemService : IFoundItemService
     /// <inheritdoc />
     public async Task<int> CreateAsync(FoundItemCreateViewModel vm, string reporterUserId)
     {
+        // Backstop: an admin may have flagged this user IsPostingBlocked. Controllers pre-check this,
+        // but enforce it here too so no create path (present or future) can slip past the block.
+        var poster = await _db.Users.FindAsync(reporterUserId);
+        if (poster is not null && poster.IsPostingBlocked)
+            throw new InvalidOperationException("Bạn đã bị chặn đăng bài. Vui lòng liên hệ quản trị viên.");
+
         // Enforce the per-post image cap BEFORE uploading (don't waste Cloudinary calls).
         var intendedCount = (vm.CoverImage != null ? 1 : 0) + (vm.OtherImages?.Count ?? 0);
         if (intendedCount > MaxImages)

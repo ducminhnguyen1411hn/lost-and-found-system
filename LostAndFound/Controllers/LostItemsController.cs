@@ -24,6 +24,15 @@ public class LostItemsController : Controller
         _db = db;
     }
 
+    /// <summary>True when an admin has flagged the signed-in user IsPostingBlocked. This direct
+    /// /LostItems/Create path is legacy (the nav routes through Items/Create) but still reachable.</summary>
+    private async Task<bool> IsPostingBlockedAsync()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var user = await _db.Users.FindAsync(userId);
+        return user is not null && user.IsPostingBlocked;
+    }
+
     // GET /LostItems — replaced by the unified board; keep a permanent redirect for old links/bookmarks.
     [AllowAnonymous]
     [HttpGet]
@@ -42,6 +51,12 @@ public class LostItemsController : Controller
     [HttpGet]
     public async Task<IActionResult> Create()
     {
+        if (await IsPostingBlockedAsync())
+        {
+            TempData["ErrorMessage"] = "Bạn đã bị chặn đăng bài. Vui lòng liên hệ quản trị viên.";
+            return RedirectToAction("Index", "Items");
+        }
+
         var vm = new LostItemCreateViewModel
         {
             LostAt = AppTime.LocalNow,
@@ -56,6 +71,12 @@ public class LostItemsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(LostItemCreateViewModel vm)
     {
+        if (await IsPostingBlockedAsync())
+        {
+            TempData["ErrorMessage"] = "Bạn đã bị chặn đăng bài. Vui lòng liên hệ quản trị viên.";
+            return RedirectToAction("Index", "Items");
+        }
+
         if (!ModelState.IsValid) return await RedisplayCreate(vm);
 
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;

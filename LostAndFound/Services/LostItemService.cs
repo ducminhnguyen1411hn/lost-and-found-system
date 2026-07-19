@@ -33,6 +33,12 @@ public class LostItemService : ILostItemService
     /// <inheritdoc />
     public async Task<int> CreateAsync(LostItemCreateViewModel vm, string ownerUserId)
     {
+        // Backstop: an admin may have flagged this user IsPostingBlocked. Controllers pre-check this,
+        // but enforce it here too so no create path (present or future) can slip past the block.
+        var poster = await _db.Users.FindAsync(ownerUserId);
+        if (poster is not null && poster.IsPostingBlocked)
+            throw new InvalidOperationException("Bạn đã bị chặn đăng bài. Vui lòng liên hệ quản trị viên.");
+
         var intended = (vm.CoverImage != null ? 1 : 0) + (vm.OtherImages?.Count ?? 0);
         if (intended > MaxImages) throw new ImageUploadException($"Tối đa {MaxImages} ảnh mỗi bài.");
 
