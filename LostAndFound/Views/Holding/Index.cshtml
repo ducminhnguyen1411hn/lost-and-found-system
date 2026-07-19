@@ -1,0 +1,77 @@
+@model List<LostAndFound.Models.ViewModels.Holding.PendingIntakeViewModel>
+@{
+    ViewData["Title"] = "Đồ chờ tiếp nhận";
+}
+
+<div class="container mt-4 mb-5">
+    <div class="mb-3">
+        <h3 class="fw-bold mb-1 text-dark">Đồ ký gửi</h3>
+        <p class="text-muted mb-0">Đồ ký gửi (Custodial) đang chờ nhân viên xác nhận đã nhận. Nhập nơi cất rồi bấm "Tiếp nhận" để mở cho người mất nhận lại.</p>
+    </div>
+
+    <partial name="_HoldingTabs" />
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="card border-0 shadow-sm" style="border-radius: 8px;">
+            <div class="card-body text-center py-5">
+                <h5 class="fw-bold text-dark">Không có đồ nào chờ tiếp nhận</h5>
+                <p class="text-muted mb-0">Khi có người chọn "Ký gửi cho Staff" lúc đăng đồ, món đó sẽ hiện ở đây.</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="text-muted small mb-2">@Model.Count món đang chờ</div>
+        <div class="table-responsive">
+            <table class="table align-middle" style="border-top: 1px solid #e5e7eb;">
+                <thead>
+                    <tr class="text-muted" style="font-size: 0.9rem;">
+                        <th class="fw-normal border-0 border-bottom pb-3">Tiêu đề</th>
+                        <th class="fw-normal border-0 border-bottom pb-3">Danh mục</th>
+                        <th class="fw-normal border-0 border-bottom pb-3">Nơi nhặt</th>
+                        <th class="fw-normal border-0 border-bottom pb-3">Người đăng</th>
+                        <th class="fw-normal border-0 border-bottom pb-3">Ngày nhặt</th>
+                        <th class="fw-normal border-0 border-bottom pb-3" style="min-width: 280px;">Tiếp nhận</th>
+                    </tr>
+                </thead>
+                <tbody style="font-size: 0.95rem;">
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="py-3 border-bottom fw-medium text-dark">@item.Title</td>
+                            <td class="py-3 border-bottom">@item.CategoryName</td>
+                            <td class="py-3 border-bottom">@item.LocationName</td>
+                            <td class="py-3 border-bottom">@item.ReporterName</td>
+                            <td class="py-3 border-bottom text-muted" style="font-size: 0.9rem;">@AppTime.ToLocal(item.FoundAt).ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="py-3 border-bottom">
+                                <form asp-action="Confirm" method="post" class="d-flex gap-2 align-items-center">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@item.Id" />
+                                    <input type="text" name="storageLocation" class="form-control form-control-sm"
+                                           placeholder="Nơi cất (VD: Tủ A-3)" maxlength="200" required style="min-width: 160px;" />
+                                    <button type="submit" class="btn btn-sm btn-success text-nowrap">Tiếp nhận</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
