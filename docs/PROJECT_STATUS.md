@@ -14,15 +14,15 @@
 | **FR-TAG-04** autocomplete | ✅ Xong | `TagsController.Suggest` (public) + `TagService.SuggestTagsAsync`, dùng ở form đăng |
 | **FR-LOG** 01–02 | ✅ Xong | `AuditService`, ghi trong cùng transaction |
 | **FR-CLAIM** 01–05 | ✅ Xong | + huỷ-chấp-nhận, thread nhắn tin, contact optional, mốc giờ bàn giao |
-| **FR-CLAIM-06** tranh chấp | ❌ | Staff phân xử — **thread đã là nguyên liệu sẵn** |
+| **FR-CLAIM-06** tranh chấp | ❌ **đã quyết bỏ** | Holder tự accept đã lo ca thường gặp |
 | **FR-TL** 01–02 | ✅ Xong | timeline trên trang item, lọc `IsPublic`, không rò tên |
 | **FR-TL-03** | 🟡 Một nửa | `Returned` chốt timeline ✅; lời cảm ơn chờ FR-THANK |
 | **FR-NOTI-01** | ✅ Xong | ghi `Notification` vào DB |
 | **FR-NOTI-03** | ✅ Xong | chuông: đếm chưa đọc / list / mark-read |
 | **FR-NOTI-02/04** realtime | ❌ | **`Hubs/` vẫn trống** — chưa có SignalR. Seam đã cắm sẵn `// TODO (FR-NOTI)` trong `NotificationService` |
 | **FR-HOLD** 01–03 | ✅ Xong | Custodial intake: tab "Chờ tiếp nhận" (`PendingDropoff`→`Open`, nhập nơi cất) + tab "Đã tiếp nhận" (kho: lọc trạng thái, sửa nơi cất). `HoldingController`/`HoldingService`, nav Staff/Admin |
-| **FR-MATCH** 01–05 | ❌ | bảng `LostAlert` có, **0 code dùng tới**. Giá trị lõi lớn nhất còn lại — xem §2 |
-| **FR-CAM** 01–04 | ❌ | bảng có, **0 code dùng tới** |
+| **FR-MATCH** 01–05 | ❌ **đã quyết bỏ** | Bảng "Đồ bị mất" đã cho chỗ khai "tôi mất X"; chấp nhận **không auto-notify** khi có đồ trùng. `LostAlert` để không |
+| **FR-CAM** 01–04 | ✅ Xong | Kênh xin trích camera: member gửi (khu vực/giờ/mô tả) → staff phản hồi thẳng (Resolved/Rejected + ghi chú). `CameraController`/`CameraService`, một-bước |
 | **FR-THANK** 01–03 | ❌ **đã quyết bỏ** | bảng để không cũng vô hại; kéo theo FR-TL-03 khép luôn |
 | **FR-ADMIN** 01–06 | ✅ Xong (đã merge từ `main`) | CRUD Category/Location/Tag · Unclaimed→Disposed · dashboard · xem AuditLog · `AdminUsersController` (user/role). **Mình bổ sung**: màn "Quản lý bài đăng" (list mọi post + gỡ cascade + đăng hộ) và nút "Quét đồ quá hạn" (Open→Unclaimed) |
 
@@ -30,13 +30,13 @@
 
 **Ngoài spec (tự thêm):** bảng "Đồ bị mất" (`FR-LOST`) · bảng gộp `/Items` (found+lost, filter sidebar) · form đăng gộp · `/Items/Mine` "Bài đăng của tôi" · admin "Quản lý bài đăng" (gỡ cascade + đăng hộ) · chặn đăng bài theo cờ `IsPostingBlocked` (mọi đường Create) · chọn lại ảnh bìa ở màn Sửa · Open→Unclaimed sweep + cron.
 
-## 2. Làm gì tiếp — theo thứ tự đề xuất
+## 2. Làm gì tiếp
 
-1. **FR-MATCH** ← *cái to còn lại*. Khớp lost↔found + tự động báo. ⚠️ **Cần brainstorm chốt thiết kế trước**: spec dùng `LostAlert` (đăng ký theo dõi thụ động), nhưng ta **đã có bảng "Đồ bị mất" chủ động**. Phải quyết match với cái nào, đừng làm trùng.
-2. **FR-NOTI-02/04 (SignalR)** — chuông hiện chỉ cập nhật khi load lại trang. Hạ tầng DB đã xong, chỉ cần Hub + push. "Giá trị lõi realtime" của đồ án.
-3. **FR-CAM**, **FR-CLAIM-06** — thứ yếu.
+Luồng chính + các FR trong tầm đã xong. **Chỉ còn 1 thứ tuỳ chọn:**
 
-> **FR-THANK đã quyết bỏ**; FR-TL-03 theo đó khép (`Returned` chốt timeline là hết).
+1. **FR-NOTI-02/04 (SignalR realtime)** — chuông đẩy realtime thay vì phải load lại trang. Hạ tầng DB + bell đã xong, chỉ cần Hub + push. Là "điểm cộng tự động hoá", không chặn luồng nào.
+
+> **Đã quyết bỏ:** **FR-MATCH** (bảng "Đồ bị mất" đã đủ, chấp nhận không auto-notify), **FR-THANK** (kéo FR-TL-03 khép luôn — `Returned` chốt timeline là hết), **FR-CLAIM-06**.
 
 > **Phân công (cập nhật):** FR-ADMIN vốn của đồng đội, **giờ đã merge vào nhánh này và xong**; mình đã bổ sung màn quản lý bài đăng + sweep Unclaimed. Trước khi sửa sâu vào khu admin, **phối hợp với đồng đội** tránh giẫm chân + tránh conflict lần nữa.
 
