@@ -60,8 +60,8 @@ namespace LostAndFound.Controllers
                 IsPostingBlocked = user.IsPostingBlocked
             };
 
-            // Tự động sinh danh sách checkbox từ các Role có trong DB
-            foreach (var role in allRoles)
+            var validRoles = new[] { "Member", "Staff", "Admin" };
+            foreach(var role in allRoles.Where(r => validRoles.Contains(r.Name)))
             {
                 model.Roles.Add(new RoleSelectionViewModel
                 {
@@ -112,6 +112,14 @@ namespace LostAndFound.Controllers
             if (string.IsNullOrEmpty(selectedRole))
             {
                 ModelState.AddModelError(string.Empty, "Mỗi người dùng phải có ít nhất một role.");
+                return View(model);
+            }
+
+            // CHỐT CHẶN BẢO MẬT 4: Chỉ cho phép gán 3 roles hợp lệ
+            var validRoles = new[] { "Member", "Staff", "Admin" };
+            if (!validRoles.Contains(selectedRole))
+            {
+                ModelState.AddModelError(string.Empty, "Vai trò không hợp lệ. Chỉ cho phép Member, Staff, hoặc Admin.");
                 return View(model);
             }
 
