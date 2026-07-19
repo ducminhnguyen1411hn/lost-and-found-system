@@ -11,10 +11,12 @@ namespace LostAndFound.Controllers;
 public class AdminController : Controller
 {
     private readonly IAdminService _adminService;
+    private readonly IUnclaimedSweepService _sweep;
 
-    public AdminController(IAdminService adminService)
+    public AdminController(IAdminService adminService, IUnclaimedSweepService sweep)
     {
         _adminService = adminService;
+        _sweep = sweep;
     }
 
     #region Dashboard
@@ -285,8 +287,22 @@ public class AdminController : Controller
     // GET: /Admin/Unclaimed
     public async Task<IActionResult> Unclaimed()
     {
+        ViewBag.OverdueDays = _sweep.OverdueDays;
         var model = await _adminService.GetUnclaimedItemsAsync();
         return View(model);
+    }
+
+    // POST: /Admin/Unclaimed/Sweep — mark overdue Open items (no pending claim) as Unclaimed.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SweepUnclaimed()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var marked = await _sweep.SweepOverdueAsync(userId);
+        TempData[marked > 0 ? "SuccessMessage" : "InfoMessage"] = marked > 0
+            ? $"Đã đánh dấu {marked} món quá hạn là chưa có người nhận."
+            : $"Không có món nào quá {_sweep.OverdueDays} ngày mà chưa có người nhận.";
+        return RedirectToAction(nameof(Unclaimed));
     }
 
     // POST: /Admin/Unclaimed/Dispose/{id}
