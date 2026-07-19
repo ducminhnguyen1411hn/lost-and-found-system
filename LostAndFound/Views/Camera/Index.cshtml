@@ -1,0 +1,114 @@
+@using LostAndFound.Models.Enums
+@model LostAndFound.Models.ViewModels.Camera.CameraListViewModel
+@{
+    ViewData["Title"] = "Yêu cầu camera";
+
+    string BadgeClass(CameraRequestStatus s) => s switch
+    {
+        CameraRequestStatus.Pending => "bg-secondary",
+        CameraRequestStatus.InReview => "bg-info text-dark",
+        CameraRequestStatus.Resolved => "bg-success",
+        CameraRequestStatus.Rejected => "bg-danger",
+        _ => "bg-light text-dark"
+    };
+
+    bool IsOpen(CameraRequestStatus s) => s != CameraRequestStatus.Resolved && s != CameraRequestStatus.Rejected;
+}
+
+<div class="container mt-4 mb-5">
+    <div class="mb-3">
+        <h3 class="fw-bold mb-1 text-dark">Yêu cầu camera</h3>
+        <p class="text-muted mb-0">Yêu cầu trích camera từ người dùng. Xem lại camera thực tế rồi phản hồi (ghi rõ thấy / không thấy ở ghi chú).</p>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <form method="get" asp-action="Index" class="d-flex gap-2 align-items-center mb-3">
+        <label class="text-muted small mb-0">Lọc trạng thái:</label>
+        <select name="status" class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit()">
+            <option value="">Tất cả</option>
+            <option value="0" selected="@(Model.StatusFilter == CameraRequestStatus.Pending)">Chờ xử lý</option>
+            <option value="2" selected="@(Model.StatusFilter == CameraRequestStatus.Resolved)">Đã xử lý</option>
+            <option value="3" selected="@(Model.StatusFilter == CameraRequestStatus.Rejected)">Từ chối</option>
+        </select>
+    </form>
+
+    @if (!Model.Items.Any())
+    {
+        <div class="card border-0 shadow-sm" style="border-radius: 8px;">
+            <div class="card-body text-center py-5">
+                <h5 class="fw-bold text-dark">Không có yêu cầu nào</h5>
+                <p class="text-muted mb-0">Khi có người xin trích camera, yêu cầu sẽ hiện ở đây.</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="text-muted small mb-2">@Model.Items.Count yêu cầu</div>
+        <div class="vstack gap-3">
+            @foreach (var r in Model.Items)
+            {
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div>
+                                <div class="fw-semibold">@r.LocationName <span class="text-muted small fw-normal">· @r.RequesterName</span></div>
+                                <div class="text-muted small">
+                                    @AppTime.ToLocal(r.FromTime).ToString("dd/MM/yyyy HH:mm") – @AppTime.ToLocal(r.ToTime).ToString("dd/MM/yyyy HH:mm")
+                                </div>
+                            </div>
+                            <span class="badge @BadgeClass(r.Status)">@r.StatusText</span>
+                        </div>
+                        <p class="mb-1 mt-2">@r.ItemDescription</p>
+
+                        @if (IsOpen(r.Status))
+                        {
+                            <form asp-action="Respond" method="post" class="mt-2 border-top pt-2">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@r.Id" />
+                                <input type="hidden" name="status" value="@((int?)Model.StatusFilter)" />
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-sm-3">
+                                        <label class="form-label small mb-1">Kết quả</label>
+                                        <select name="outcome" class="form-select form-select-sm">
+                                            <option value="2">Đã xử lý</option>
+                                            <option value="3">Từ chối</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-sm-7">
+                                        <label class="form-label small mb-1">Ghi chú (thấy / không thấy / lý do)</label>
+                                        <input type="text" name="note" class="form-control form-control-sm" maxlength="1000"
+                                               placeholder="VD: Thấy người mặc áo đỏ cầm balo lúc 9:12, đã liên hệ." />
+                                    </div>
+                                    <div class="col-sm-2">
+                                        <button type="submit" class="btn btn-sm btn-primary w-100">Phản hồi</button>
+                                    </div>
+                                </div>
+                            </form>
+                        }
+                        else
+                        {
+                            <div class="border-start border-3 ps-2 mt-2 small">
+                                <span class="text-muted">Đã phản hồi@(r.HandledByName != null ? $" bởi {r.HandledByName}" : "")@(r.HandledAt != null ? $" · {AppTime.ToLocal(r.HandledAt.Value):dd/MM/yyyy HH:mm}" : ""):</span>
+                                <div>@(string.IsNullOrWhiteSpace(r.ResponseNote) ? "(không có ghi chú)" : r.ResponseNote)</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
