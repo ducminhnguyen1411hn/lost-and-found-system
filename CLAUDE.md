@@ -6,11 +6,12 @@ and returns go through a verified two-way handover. Full specs live in **[docs/I
 read it before non-trivial work.
 
 > **Status → [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)** — read it first. It has the FR-by-FR
-> state, what to build next, and the project-wide traps. Short version (2026-07-17): FR-AUTH / FR-FOUND /
-> FR-TAG / FR-LOG / FR-CLAIM / FR-TL are **done**; notifications are DB-only (**SignalR not built,
-> `Hubs/` is empty**); **FR-HOLD, FR-MATCH, FR-CAM, FR-THANK, FR-ADMIN are not started**. Biggest live
-> gap: **FR-HOLD** — a Custodial item lands in `PendingDropoff` and is stuck there forever, because no
-> staff-intake screen exists to move it to `Open`. **FR-ADMIN is the teammate's — don't build it here.**
+> state, what to build next, and the project-wide traps. Short version (2026-07-20): FR-AUTH / FR-FOUND /
+> FR-TAG / FR-LOG / FR-CLAIM / FR-TL / **FR-HOLD** / **FR-ADMIN** are **done** — the found-item lifecycle is
+> now closed (post → intake → Open → claim/return **or** Open→Unclaimed sweep → Disposed). Notifications are
+> still DB-only (**SignalR not built, `Hubs/` is empty**). **Not started: FR-MATCH** (the big one — needs a
+> design call, LostAlert vs the existing "Đồ bị mất" board), **FR-CAM**, **FR-CLAIM-06**. **FR-THANK is
+> dropped.** FR-ADMIN was the teammate's but is now merged in — coordinate before deep admin edits.
 > Per-feature lessons + recipes live in [docs/features/](docs/features/); requirements in
 > [docs/specs/REQUIREMENTS_2DEV.md](docs/specs/REQUIREMENTS_2DEV.md).
 
