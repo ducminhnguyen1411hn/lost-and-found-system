@@ -2,7 +2,6 @@ using System.Security.Claims;
 using LostAndFound.Data;
 using LostAndFound.Models.Entities;
 using LostAndFound.Models.Enums;
-using LostAndFound.Models.ViewModels.Common;
 using LostAndFound.Models.ViewModels.LostItems;
 using LostAndFound.Services.Images;
 using LostAndFound.Services.Interfaces;
@@ -14,7 +13,6 @@ namespace LostAndFound.Services;
 public class LostItemService : ILostItemService
 {
     private const string ImageFolder = "lostandfound/lostitems";
-    private const int MaxPageSize = 60;
     private const int MaxImages = 7;
 
     private readonly ApplicationDbContext _db;
@@ -73,53 +71,6 @@ public class LostItemService : ILostItemService
 
         await tx.CommitAsync();
         return item.Id;
-    }
-
-    /// <inheritdoc />
-    public async Task<PagedResult<LostItemListItemViewModel>> SearchAsync(LostItemSearchViewModel q)
-    {
-        var page = q.Page < 1 ? 1 : q.Page;
-        var pageSize = q.PageSize < 1 ? 12 : Math.Min(q.PageSize, MaxPageSize);
-
-        var query = _db.LostItem.AsNoTracking().Where(l => l.Status == (int)LostItemStatus.Open);
-
-        if (!string.IsNullOrWhiteSpace(q.Keyword))
-        {
-            var kw = q.Keyword.Trim();
-            query = query.Where(l => l.Title.Contains(kw) || (l.Description != null && l.Description.Contains(kw)));
-        }
-        if (q.CategoryId is int cat) query = query.Where(l => l.CategoryId == cat);
-        if (q.LocationId is int loc) query = query.Where(l => l.LocationId == loc);
-        if (q.LostFrom is DateTime from) { var f = AppTime.ToUtc(from); query = query.Where(l => l.LostAt >= f); }
-        if (q.LostTo is DateTime to) { var t = AppTime.ToUtc(to).AddMinutes(1); query = query.Where(l => l.LostAt < t); }
-        if (!string.IsNullOrWhiteSpace(q.Tag))
-        {
-            var norm = _tags.Normalize(q.Tag);
-            query = query.Where(l => l.LostItemTag.Any(lt => lt.Tag.NormalizedTag == norm));
-        }
-
-        var total = await query.CountAsync();
-
-        var items = await query
-            .OrderByDescending(l => l.CreatedAt)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(l => new LostItemListItemViewModel
-            {
-                Id = l.Id,
-                Title = l.Title,
-                Description = l.Description,
-                CategoryName = l.Category.Name,
-                LocationName = l.Location.Name,
-                LostAt = l.LostAt,
-                CoverImagePath = l.LostItemImage.OrderBy(im => im.SortOrder).Select(im => im.Url).FirstOrDefault(),
-                ImageCount = l.LostItemImage.Count,
-                CreatedAt = l.CreatedAt,
-                DisplayTags = l.LostItemTag.Select(lt => lt.Tag.DisplayTag).ToList()
-            })
-            .ToListAsync();
-
-        return new PagedResult<LostItemListItemViewModel> { Items = items, Page = page, PageSize = pageSize, TotalCount = total };
     }
 
     /// <inheritdoc />

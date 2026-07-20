@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using LostAndFound.Models.ViewModels.Common;
 using LostAndFound.Models.ViewModels.LostItems;
 
 namespace LostAndFound.Services.Interfaces;
@@ -9,7 +8,6 @@ namespace LostAndFound.Services.Interfaces;
 public interface ILostItemService
 {
     Task<int> CreateAsync(LostItemCreateViewModel vm, string ownerUserId);
-    Task<PagedResult<LostItemListItemViewModel>> SearchAsync(LostItemSearchViewModel query);
     Task<LostItemDetailViewModel?> GetDetailAsync(int id, ClaimsPrincipal user);
     Task<LostItemEditViewModel?> GetForEditAsync(int id, string userId);
     Task<bool> UpdateAsync(int id, LostItemEditViewModel vm, string userId);

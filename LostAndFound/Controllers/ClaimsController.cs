@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using LostAndFound.Models.Enums;
 using LostAndFound.Models.ViewModels.Claims;
+using LostAndFound.Services;
 using LostAndFound.Services.Images;
 using LostAndFound.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -73,6 +74,29 @@ public class ClaimsController : Controller
         var vm = await _claims.GetClaimDetailAsync(id, User);
         if (vm is null) return NotFound();
         return View(vm);
+    }
+
+    /// <summary>Lightweight polling endpoint for the claim chat (stand-in until SignalR). Returns only the
+    /// messages newer than <paramref name="afterId"/>, and reuses <see cref="IClaimService.GetClaimDetailAsync"/>
+    /// so the SAME authorization applies — only the claimant, the holder, or an Admin ever gets rows back
+    /// (anyone else gets 404). Nothing beyond message fields is exposed (no verification/contact).</summary>
+    [HttpGet]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> Messages(int id, int afterId = 0)
+    {
+        var vm = await _claims.GetClaimDetailAsync(id, User);
+        if (vm is null) return NotFound();
+        var newer = vm.Messages
+            .Where(m => m.Id > afterId)
+            .Select(m => new
+            {
+                id = m.Id,
+                sender = m.SenderName,
+                body = m.Body,
+                at = AppTime.ToLocal(m.CreatedAt).ToString("dd/MM HH:mm"),
+                mine = m.IsMine
+            });
+        return Json(new { messages = newer, canPost = vm.CanPostMessage });
     }
 
     [HttpPost]

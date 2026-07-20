@@ -50,8 +50,6 @@ public partial class FoundItem
 
     public virtual Location Location { get; set; } = null!;
 
-    public virtual ThankYou? ThankYou { get; set; }
-
     // Navigation properties (added manually, not in scaffold)
     public virtual ApplicationUser ReporterUser { get; set; } = null!;
     public virtual ApplicationUser? CustodianStaff { get; set; }

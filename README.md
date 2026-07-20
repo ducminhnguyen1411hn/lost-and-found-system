@@ -127,6 +127,42 @@ Server=(localdb)\MSSQLLocalDB;Database=LostAndFound;Trusted_Connection=True;Trus
 Application URLs and launch profiles are defined in
 [LostAndFound/Properties/launchSettings.json](LostAndFound/Properties/launchSettings.json).
 
+### Secrets — Cloudinary & local overrides
+
+`appsettings.json` is **committed to git**, so it holds only non-secret defaults: the `Cloudinary`
+values there are intentionally left **empty**. **Never paste real API keys into `appsettings.json`** —
+once committed they stay in git history forever, even if you delete them in a later commit.
+
+Image upload (found/lost item photos) needs a **Cloudinary** account. Put your real keys in **one** of
+the places below — both are kept out of git and override `appsettings.json` at runtime:
+
+**Option A — `appsettings.Development.json`** (git-ignored; the simplest "just works" local file):
+
+```json
+{
+  "Cloudinary": {
+    "CloudName": "<your-cloud-name>",
+    "ApiKey": "<your-api-key>",
+    "ApiSecret": "<your-api-secret>"
+  }
+}
+```
+
+**Option B — user-secrets** (per-developer, stored outside the repo):
+
+```powershell
+dotnet user-secrets set "Cloudinary:CloudName" "<your-cloud-name>" --project LostAndFound/LostAndFound.csproj
+dotnet user-secrets set "Cloudinary:ApiKey"    "<your-api-key>"    --project LostAndFound/LostAndFound.csproj
+dotnet user-secrets set "Cloudinary:ApiSecret" "<your-api-secret>" --project LostAndFound/LostAndFound.csproj
+```
+
+You can override `ConnectionStrings:DefaultConnection` the same way (e.g. to point at a real SQL Server
+instance instead of LocalDB).
+
+> `appsettings.Development.json` is listed in `.gitignore`. If `git status` still shows it as tracked,
+> untrack it once (the file stays on disk): `git rm --cached LostAndFound/appsettings.Development.json`.
+> Without Cloudinary configured the app still runs — only image upload fails.
+
 ---
 
 ## Troubleshooting

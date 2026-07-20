@@ -269,7 +269,7 @@ public class AdminController : Controller
             if (result)
                 TempData["SuccessMessage"] = "Unused tags cleaned up successfully.";
             else
-                TempData["InfoMessage"] = "No unused tags found.";
+                TempData["InfoMessage"] = "Không có thẻ nào chưa dùng.";
 
             return RedirectToAction(nameof(Tags));
         }

@@ -172,6 +172,17 @@ END
 GO
 
 /* =====================================================================
+   Reconcile older DBs: drop dead-feature tables (idempotent, no-op on a fresh DB).
+   - LostAlert / LostAlertTag: the FR-MATCH "watch subscription" (dropped feature) — always empty.
+   - ThankYou: the FR-THANK rating feature (dropped) — always empty.
+   Child table is dropped before its parent to satisfy the FK.
+   ===================================================================== */
+DROP TABLE IF EXISTS dbo.LostAlertTag;
+DROP TABLE IF EXISTS dbo.LostAlert;
+DROP TABLE IF EXISTS dbo.ThankYou;
+GO
+
+/* =====================================================================
    2. Lookup / reference tables
    ===================================================================== */
 
@@ -214,29 +225,6 @@ GO
 /* =====================================================================
    3. Core domain tables
    ===================================================================== */
-
--- LostAlert: a Member's "watch" subscription (publish/subscribe matching).
-IF OBJECT_ID(N'dbo.LostAlert', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.LostAlert (
-        Id          int           NOT NULL IDENTITY(1,1) CONSTRAINT PK_LostAlert PRIMARY KEY,
-        OwnerUserId nvarchar(450) NOT NULL,
-        CategoryId  int           NULL,
-        LocationId  int           NULL,
-        FromDate    datetime2     NULL,
-        ToDate      datetime2     NULL,
-        Keyword     nvarchar(200) NULL,
-        IsActive    bit           NOT NULL CONSTRAINT DF_LostAlert_IsActive DEFAULT (1),
-        CreatedAt   datetime2     NOT NULL CONSTRAINT DF_LostAlert_CreatedAt DEFAULT (SYSUTCDATETIME()),
-        CONSTRAINT FK_LostAlert_AspNetUsers_OwnerUserId FOREIGN KEY (OwnerUserId) REFERENCES dbo.AspNetUsers (Id) ON DELETE NO ACTION,
-        CONSTRAINT FK_LostAlert_Category_CategoryId     FOREIGN KEY (CategoryId)  REFERENCES dbo.Category (Id)    ON DELETE NO ACTION,
-        CONSTRAINT FK_LostAlert_Location_LocationId     FOREIGN KEY (LocationId)  REFERENCES dbo.Location (Id)    ON DELETE NO ACTION
-    );
-    CREATE INDEX IX_LostAlert_OwnerUserId ON dbo.LostAlert (OwnerUserId);
-    CREATE INDEX IX_LostAlert_CategoryId  ON dbo.LostAlert (CategoryId);
-    CREATE INDEX IX_LostAlert_LocationId  ON dbo.LostAlert (LocationId);
-END
-GO
 
 -- FoundItem: the reported found item + public listing. Status/HoldingType are int enums.
 IF OBJECT_ID(N'dbo.FoundItem', N'U') IS NULL
@@ -318,21 +306,6 @@ BEGIN
         INSERT INTO dbo.FoundItemImage (FoundItemId, Url, SortOrder)
         SELECT Id, ImagePath, 0 FROM dbo.FoundItem WHERE ImagePath IS NOT NULL AND ImagePath <> N'''';
         ALTER TABLE dbo.FoundItem DROP COLUMN ImagePath;';
-END
-GO
-
--- LostAlertTag: M-N join for watch-subscription tags.
-IF OBJECT_ID(N'dbo.LostAlertTag', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.LostAlertTag (
-        Id          int NOT NULL IDENTITY(1,1) CONSTRAINT PK_LostAlertTag PRIMARY KEY,
-        LostAlertId int NOT NULL,
-        TagId       int NOT NULL,
-        CONSTRAINT UX_LostAlertTag_Alert_Tag UNIQUE (LostAlertId, TagId),
-        CONSTRAINT FK_LostAlertTag_LostAlert_LostAlertId FOREIGN KEY (LostAlertId) REFERENCES dbo.LostAlert (Id) ON DELETE CASCADE,
-        CONSTRAINT FK_LostAlertTag_Tag_TagId             FOREIGN KEY (TagId)       REFERENCES dbo.Tag (Id)       ON DELETE NO ACTION
-    );
-    CREATE INDEX IX_LostAlertTag_TagId ON dbo.LostAlertTag (TagId);
 END
 GO
 
@@ -508,28 +481,6 @@ BEGIN
     CREATE INDEX IX_CameraCheckRequest_RequesterUserId  ON dbo.CameraCheckRequest (RequesterUserId);
     CREATE INDEX IX_CameraCheckRequest_LocationId       ON dbo.CameraCheckRequest (LocationId);
     CREATE INDEX IX_CameraCheckRequest_HandledByStaffId ON dbo.CameraCheckRequest (HandledByStaffId);
-END
-GO
-
--- ThankYou: rating + thanks after a successful return. At most one per FoundItem.
-IF OBJECT_ID(N'dbo.ThankYou', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.ThankYou (
-        Id          int            NOT NULL IDENTITY(1,1) CONSTRAINT PK_ThankYou PRIMARY KEY,
-        FoundItemId int            NOT NULL,
-        FromUserId  nvarchar(450)  NOT NULL,
-        ToUserId    nvarchar(450)  NOT NULL,
-        Rating      int            NOT NULL,
-        Message     nvarchar(1000) NULL,
-        CreatedAt   datetime2      NOT NULL CONSTRAINT DF_ThankYou_CreatedAt DEFAULT (SYSUTCDATETIME()),
-        CONSTRAINT CK_ThankYou_Rating CHECK (Rating BETWEEN 1 AND 5),
-        CONSTRAINT UX_ThankYou_FoundItemId UNIQUE (FoundItemId), -- 1:0..1 with FoundItem
-        CONSTRAINT FK_ThankYou_FoundItem_FoundItemId   FOREIGN KEY (FoundItemId) REFERENCES dbo.FoundItem (Id)   ON DELETE NO ACTION,
-        CONSTRAINT FK_ThankYou_AspNetUsers_FromUserId  FOREIGN KEY (FromUserId)  REFERENCES dbo.AspNetUsers (Id) ON DELETE NO ACTION,
-        CONSTRAINT FK_ThankYou_AspNetUsers_ToUserId    FOREIGN KEY (ToUserId)    REFERENCES dbo.AspNetUsers (Id) ON DELETE NO ACTION
-    );
-    CREATE INDEX IX_ThankYou_FromUserId ON dbo.ThankYou (FromUserId);
-    CREATE INDEX IX_ThankYou_ToUserId   ON dbo.ThankYou (ToUserId);
 END
 GO
 

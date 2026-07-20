@@ -67,39 +67,9 @@ public class AdminService : IAdminService
         return result;
     }
 
-    public async Task<CategoryViewModel?> GetCategoryByIdAsync(int id)
-    {
-        var category = await _db.Category
-            .Include(c => c.Parent)
-            .Include(c => c.InverseParent)
-            .Include(c => c.FoundItem)
-            .FirstOrDefaultAsync(c => c.Id == id);
-
-        if (category == null) return null;
-
-        return new CategoryViewModel
-        {
-            Id = category.Id,
-            Name = category.Name,
-            ParentId = category.ParentId,
-            ParentName = category.Parent?.Name,
-            HasChildren = category.InverseParent.Any(),
-            ItemCount = category.FoundItem.Count
-        };
-    }
-
-    public async Task<CategoryCreateViewModel> GetCategoryCreateViewModelAsync()
-    {
-        var parentCategories = await _db.Category
-            .Where(c => c.ParentId == null)
-            .OrderBy(c => c.Name)
-            .ToListAsync();
-
-        return new CategoryCreateViewModel
-        {
-            // ParentId will be set by the user via dropdown
-        };
-    }
+    public Task<CategoryCreateViewModel> GetCategoryCreateViewModelAsync()
+        // Parent dropdown is supplied separately by the controller (ViewBag); nothing to load here.
+        => Task.FromResult(new CategoryCreateViewModel());
 
     public async Task<CategoryEditViewModel?> GetCategoryEditViewModelAsync(int id)
     {
@@ -155,14 +125,14 @@ public class AdminService : IAdminService
 
         // Prevent circular reference
         if (model.ParentId.HasValue && model.ParentId.Value == model.Id)
-            throw new ArgumentException("Category cannot be its own parent");
+            throw new ArgumentException("Danh mục không thể là cha của chính nó");
 
         // Prevent moving a parent under its own child
         if (model.ParentId.HasValue)
         {
             var isDescendant = IsDescendant(model.ParentId.Value, model.Id);
             if (isDescendant)
-                throw new ArgumentException("Cannot move category under its own descendant");
+                throw new ArgumentException("Không thể chuyển danh mục vào dưới nhánh con của chính nó");
         }
 
         var oldName = category.Name;
@@ -191,11 +161,11 @@ public class AdminService : IAdminService
 
         // Prevent deletion if has children
         if (category.InverseParent.Any())
-            throw new ArgumentException("Cannot delete category with child categories");
+            throw new ArgumentException("Không thể xoá danh mục còn danh mục con");
 
         // Prevent deletion if has items
         if (category.FoundItem.Any())
-            throw new ArgumentException("Cannot delete category with associated items");
+            throw new ArgumentException("Không thể xoá danh mục đang có đồ gắn vào");
 
         var categoryName = category.Name;
         _db.Category.Remove(category);
@@ -245,27 +215,8 @@ public class AdminService : IAdminService
         }).ToList();
     }
 
-    public async Task<LocationViewModel?> GetLocationByIdAsync(int id)
-    {
-        var location = await _db.Location
-            .Include(l => l.FoundItem)
-            .FirstOrDefaultAsync(l => l.Id == id);
-
-        if (location == null) return null;
-
-        return new LocationViewModel
-        {
-            Id = location.Id,
-            Building = location.Building,
-            Name = location.Name,
-            ItemCount = location.FoundItem.Count
-        };
-    }
-
-    public async Task<LocationCreateViewModel> GetLocationCreateViewModelAsync()
-    {
-        return new LocationCreateViewModel();
-    }
+    public Task<LocationCreateViewModel> GetLocationCreateViewModelAsync()
+        => Task.FromResult(new LocationCreateViewModel());
 
     public async Task<LocationEditViewModel?> GetLocationEditViewModelAsync(int id)
     {
@@ -327,7 +278,7 @@ public class AdminService : IAdminService
 
         // Prevent deletion if has items
         if (location.FoundItem.Any())
-            throw new ArgumentException("Cannot delete location with associated items");
+            throw new ArgumentException("Không thể xoá địa điểm đang có đồ gắn vào");
 
         var locationName = location.Name;
         _db.Location.Remove(location);
@@ -362,7 +313,7 @@ public class AdminService : IAdminService
     public async Task<bool> MergeTagsAsync(int sourceTagId, int targetTagId, string actorUserId)
     {
         if (sourceTagId == targetTagId)
-            throw new ArgumentException("Cannot merge tag with itself");
+            throw new ArgumentException("Không thể gộp thẻ với chính nó");
 
         var sourceTag = await _db.Tag
             .Include(t => t.FoundItemTag)
@@ -395,26 +346,6 @@ public class AdminService : IAdminService
             }
         }
 
-        // Also migrate LostAlertTag references
-        var alertTags = await _db.LostAlertTag
-            .Where(lt => lt.TagId == sourceTagId)
-            .ToListAsync();
-
-        foreach (var alertTag in alertTags)
-        {
-            var existing = await _db.LostAlertTag
-                .FirstOrDefaultAsync(lt => lt.LostAlertId == alertTag.LostAlertId && lt.TagId == targetTagId);
-
-            if (existing == null)
-            {
-                alertTag.TagId = targetTagId;
-            }
-            else
-            {
-                _db.LostAlertTag.Remove(alertTag);
-            }
-        }
-
         var sourceTagName = sourceTag.DisplayTag;
         var targetTagName = targetTag.DisplayTag;
 
@@ -432,8 +363,7 @@ public class AdminService : IAdminService
     {
         var unusedTags = await _db.Tag
             .Include(t => t.FoundItemTag)
-            .Include(t => t.LostAlertTag)
-            .Where(t => !t.FoundItemTag.Any() && !t.LostAlertTag.Any())
+            .Where(t => !t.FoundItemTag.Any())
             .ToListAsync();
 
         if (!unusedTags.Any()) return false;
@@ -574,9 +504,8 @@ public class AdminService : IAdminService
                 .FirstOrDefaultAsync();
             if (meta is null) return false;
 
-            // FoundItem is blocked by two NO-ACTION parents (ThankYou, Claim); delete them first.
+            // FoundItem is blocked by a NO-ACTION parent (Claim); delete it first.
             // Deleting Claim cascades ClaimImage + ClaimMessage; deleting FoundItem cascades its images + tags.
-            await _db.ThankYou.Where(t => t.FoundItemId == id).ExecuteDeleteAsync();
             await _db.Claim.Where(c => c.FoundItemId == id).ExecuteDeleteAsync();
             await _db.FoundItem.Where(f => f.Id == id).ExecuteDeleteAsync();
 
@@ -608,7 +537,7 @@ public class AdminService : IAdminService
 
     private static string FoundStatusText(int status) => (FoundItemStatus)status switch
     {
-        FoundItemStatus.PendingDropoff => "Chờ bàn giao",
+        FoundItemStatus.PendingDropoff => "Chờ tiếp nhận",
         FoundItemStatus.Open => "Đang mở",
         FoundItemStatus.ClaimAccepted => "Đã duyệt nhận",
         FoundItemStatus.Returned => "Đã trả",

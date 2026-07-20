@@ -1,4 +1,4 @@
-﻿@model LostAndFound.Models.EditUserRolesViewModel
+﻿@model LostAndFound.Models.ViewModels.Admin.EditUserRolesViewModel
 @{
     ViewData["Title"] = "Sửa thông tin người dùng";
 }
@@ -16,7 +16,7 @@
                 <input type="hidden" asp-for="FullName" />
 
                 @* Hiển thị bảng thông báo lỗi từ Chốt chặn bảo mật nếu có *@
-                <div asp-validation-summary="ModelOnly" class="text-danger small mb-3 p-2 bg-danger-subtle rounded" style="border-left: 4px solid #dc3545;"></div>
+                <div asp-validation-summary="ModelOnly" class="text-danger small mb-3 p-2 rounded" style="border-left: 4px solid #dc3545; background-color:#f8d7da;"></div>
 
                 <div class="card shadow-sm mb-4" style="border: 1px solid #e5e7eb; border-radius: 8px;">
                     <div class="card-body p-4">

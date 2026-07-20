@@ -25,8 +25,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Category> Category => Set<Category>();
     public DbSet<Location> Location => Set<Location>();
     public DbSet<Tag> Tag => Set<Tag>();
-    public DbSet<LostAlert> LostAlert => Set<LostAlert>();
-    public DbSet<LostAlertTag> LostAlertTag => Set<LostAlertTag>();
     public DbSet<LostItem> LostItem => Set<LostItem>();
     public DbSet<LostItemImage> LostItemImage => Set<LostItemImage>();
     public DbSet<LostItemTag> LostItemTag => Set<LostItemTag>();
@@ -37,7 +35,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ClaimImage> ClaimImage => Set<ClaimImage>();
     public DbSet<ClaimMessage> ClaimMessage => Set<ClaimMessage>();
     public DbSet<CameraCheckRequest> CameraCheckRequest => Set<CameraCheckRequest>();
-    public DbSet<ThankYou> ThankYou => Set<ThankYou>();
     public DbSet<Notification> Notification => Set<Notification>();
     public DbSet<AuditLog> AuditLog => Set<AuditLog>();
 
@@ -199,32 +196,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.Name).HasMaxLength(150);
         });
 
-        modelBuilder.Entity<LostAlert>(entity =>
-        {
-            entity.HasIndex(e => e.CategoryId, "IX_LostAlert_CategoryId");
-            entity.HasIndex(e => e.LocationId, "IX_LostAlert_LocationId");
-            entity.HasIndex(e => e.OwnerUserId, "IX_LostAlert_OwnerUserId");
-
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
-            entity.Property(e => e.IsActive).HasDefaultValue(true);
-            entity.Property(e => e.Keyword).HasMaxLength(200);
-
-            entity.HasOne(d => d.Category).WithMany(p => p.LostAlert).HasForeignKey(d => d.CategoryId);
-            entity.HasOne(d => d.Location).WithMany(p => p.LostAlert).HasForeignKey(d => d.LocationId);
-        });
-
-        modelBuilder.Entity<LostAlertTag>(entity =>
-        {
-            entity.HasIndex(e => e.TagId, "IX_LostAlertTag_TagId");
-            entity.HasIndex(e => new { e.LostAlertId, e.TagId }, "UX_LostAlertTag_Alert_Tag").IsUnique();
-
-            entity.HasOne(d => d.LostAlert).WithMany(p => p.LostAlertTag).HasForeignKey(d => d.LostAlertId);
-
-            entity.HasOne(d => d.Tag).WithMany(p => p.LostAlertTag)
-                .HasForeignKey(d => d.TagId)
-                .OnDelete(DeleteBehavior.ClientSetNull);
-        });
-
         modelBuilder.Entity<LostItem>(entity =>
         {
             entity.HasIndex(e => e.CategoryId, "IX_LostItem_CategoryId");
@@ -283,20 +254,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
             entity.Property(e => e.DisplayTag).HasMaxLength(100);
             entity.Property(e => e.NormalizedTag).HasMaxLength(100);
-        });
-
-        modelBuilder.Entity<ThankYou>(entity =>
-        {
-            entity.HasIndex(e => e.FromUserId, "IX_ThankYou_FromUserId");
-            entity.HasIndex(e => e.ToUserId, "IX_ThankYou_ToUserId");
-            entity.HasIndex(e => e.FoundItemId, "UX_ThankYou_FoundItemId").IsUnique();
-
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
-            entity.Property(e => e.Message).HasMaxLength(1000);
-
-            entity.HasOne(d => d.FoundItem).WithOne(p => p.ThankYou)
-                .HasForeignKey<ThankYou>(d => d.FoundItemId)
-                .OnDelete(DeleteBehavior.ClientSetNull);
         });
     }
 }
