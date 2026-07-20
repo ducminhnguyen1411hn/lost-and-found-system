@@ -2,7 +2,6 @@ using System.Security.Claims;
 using LostAndFound.Data;
 using LostAndFound.Models.Entities;
 using LostAndFound.Models.Enums;
-using LostAndFound.Models.ViewModels.Common;
 using LostAndFound.Models.ViewModels.FoundItems;
 using LostAndFound.Services.Images;
 using LostAndFound.Services.Interfaces;
@@ -14,7 +13,6 @@ namespace LostAndFound.Services;
 public class FoundItemService : IFoundItemService
 {
     private const string ImageFolder = "lostandfound/founditems";
-    private const int MaxPageSize = 60;
     private const int MaxImages = 7; // max photos per post
 
     private readonly ApplicationDbContext _db;
@@ -93,62 +91,6 @@ public class FoundItemService : IFoundItemService
 
         await tx.CommitAsync();
         return item.Id;
-    }
-
-    /// <inheritdoc />
-    public async Task<PagedResult<FoundItemListItemViewModel>> SearchAsync(FoundItemSearchViewModel q)
-    {
-        var page = q.Page < 1 ? 1 : q.Page;
-        var pageSize = q.PageSize < 1 ? 12 : Math.Min(q.PageSize, MaxPageSize);
-
-        // Public list shows ONLY Open items.
-        var query = _db.FoundItem.AsNoTracking().Where(f => f.Status == (int)FoundItemStatus.Open);
-
-        if (!string.IsNullOrWhiteSpace(q.Keyword))
-        {
-            var kw = q.Keyword.Trim();
-            query = query.Where(f => f.Title.Contains(kw) || (f.Description != null && f.Description.Contains(kw)));
-        }
-        if (q.CategoryId is int cat) query = query.Where(f => f.CategoryId == cat);
-        if (q.LocationId is int loc) query = query.Where(f => f.LocationId == loc);
-        // Filter bounds are local wall-clock -> convert to UTC to match the stored FoundAt.
-        if (q.FoundFrom is DateTime from) { var fromUtc = AppTime.ToUtc(from); query = query.Where(f => f.FoundAt >= fromUtc); }
-        if (q.FoundTo is DateTime to) { var toUtc = AppTime.ToUtc(to).AddMinutes(1); query = query.Where(f => f.FoundAt < toUtc); } // inclusive of the "to" minute
-        if (!string.IsNullOrWhiteSpace(q.Tag))
-        {
-            var norm = _tags.Normalize(q.Tag);
-            query = query.Where(f => f.FoundItemTag.Any(ft => ft.Tag.NormalizedTag == norm));
-        }
-
-        var total = await query.CountAsync();
-
-        var items = await query
-            .OrderByDescending(f => f.CreatedAt)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(f => new FoundItemListItemViewModel
-            {
-                Id = f.Id,
-                Title = f.Title,
-                Description = f.Description,
-                CategoryName = f.Category.Name,
-                LocationName = f.Location.Name,
-                FoundAt = f.FoundAt,
-                CoverImagePath = f.FoundItemImage.OrderBy(im => im.SortOrder).Select(im => im.Url).FirstOrDefault(),
-                ImageCount = f.FoundItemImage.Count,
-                CreatedAt = f.CreatedAt,
-                DisplayTags = f.FoundItemTag.Select(ft => ft.Tag.DisplayTag).ToList()
-                // NO PrivateMarks selected — blind listing.
-            })
-            .ToListAsync();
-
-        return new PagedResult<FoundItemListItemViewModel>
-        {
-            Items = items,
-            Page = page,
-            PageSize = pageSize,
-            TotalCount = total
-        };
     }
 
     /// <inheritdoc />

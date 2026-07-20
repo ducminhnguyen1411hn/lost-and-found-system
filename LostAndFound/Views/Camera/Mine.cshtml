@@ -1,0 +1,59 @@
+@using LostAndFound.Models.Enums
+@model List<LostAndFound.Models.ViewModels.Camera.CameraRequestViewModel>
+@{
+    ViewData["Title"] = "Yêu cầu camera của tôi";
+
+    string BadgeClass(CameraRequestStatus s) => s switch
+    {
+        CameraRequestStatus.Pending => "bg-secondary",
+        CameraRequestStatus.InReview => "bg-info text-dark",
+        CameraRequestStatus.Resolved => "bg-success",
+        CameraRequestStatus.Rejected => "bg-danger",
+        _ => "bg-light text-dark"
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">Yêu cầu camera của tôi</h1>
+    <a asp-action="Create" class="btn btn-primary btn-sm">+ Xin trích camera</a>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+
+@if (!Model.Any())
+{
+    <p class="text-muted">Bạn chưa gửi yêu cầu trích camera nào.</p>
+}
+else
+{
+    <div class="vstack gap-3">
+        @foreach (var r in Model)
+        {
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div>
+                            <div class="fw-semibold">@r.LocationName</div>
+                            <div class="text-muted small">
+                                @AppTime.ToLocal(r.FromTime).ToString("dd/MM/yyyy HH:mm") – @AppTime.ToLocal(r.ToTime).ToString("dd/MM/yyyy HH:mm")
+                            </div>
+                        </div>
+                        <span class="badge @BadgeClass(r.Status)">@r.StatusText</span>
+                    </div>
+                    <p class="mb-1 mt-2">@r.ItemDescription</p>
+                    @if (!string.IsNullOrWhiteSpace(r.ResponseNote))
+                    {
+                        <div class="border-start border-3 ps-2 mt-2 small">
+                            <span class="text-muted">Phản hồi từ nhân viên@(r.HandledByName != null ? $" ({r.HandledByName})" : ""):</span>
+                            <div>@r.ResponseNote</div>
+                        </div>
+                    }
+                    <div class="text-muted small mt-2">Gửi lúc @AppTime.ToLocal(r.CreatedAt).ToString("dd/MM/yyyy HH:mm")</div>
+                </div>
+            </div>
+        }
+    </div>
+}

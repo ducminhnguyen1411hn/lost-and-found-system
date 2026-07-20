@@ -1,4 +1,4 @@
-# Trạng thái dự án — cập nhật 2026-07-17
+# Trạng thái dự án — cập nhật 2026-07-20
 
 > File này trả lời đúng 2 câu: **đang ở đâu** và **làm gì tiếp**.
 > Bài học chi tiết của từng feature nằm ở `docs/features/*.md` — đọc cái đó trước khi sửa vào vùng tương ứng.
@@ -11,32 +11,34 @@
 | **FR-AUTH** 01–05 | ✅ Xong | Identity + 4 role + seed + `AdminUsersController` (quản lý user/role) |
 | **FR-FOUND** 01–05 | ✅ Xong | + Sửa/Xoá, nhiều ảnh (Cloudinary) |
 | **FR-TAG** 01–03 | ✅ Xong | `TagService.Normalize` dùng chung |
-| **FR-TAG-04** autocomplete | ❌ | nice-to-have |
+| **FR-TAG-04** autocomplete | ✅ Xong | `TagsController.Suggest` (public) + `TagService.SuggestTagsAsync`, dùng ở form đăng |
 | **FR-LOG** 01–02 | ✅ Xong | `AuditService`, ghi trong cùng transaction |
 | **FR-CLAIM** 01–05 | ✅ Xong | + huỷ-chấp-nhận, thread nhắn tin, contact optional, mốc giờ bàn giao |
-| **FR-CLAIM-06** tranh chấp | ❌ | Staff phân xử — **thread đã là nguyên liệu sẵn** |
+| **FR-CLAIM-06** tranh chấp | ❌ **đã quyết bỏ** | Holder tự accept đã lo ca thường gặp |
 | **FR-TL** 01–02 | ✅ Xong | timeline trên trang item, lọc `IsPublic`, không rò tên |
 | **FR-TL-03** | 🟡 Một nửa | `Returned` chốt timeline ✅; lời cảm ơn chờ FR-THANK |
 | **FR-NOTI-01** | ✅ Xong | ghi `Notification` vào DB |
 | **FR-NOTI-03** | ✅ Xong | chuông: đếm chưa đọc / list / mark-read |
 | **FR-NOTI-02/04** realtime | ❌ | **`Hubs/` vẫn trống** — chưa có SignalR. Seam đã cắm sẵn `// TODO (FR-NOTI)` trong `NotificationService` |
-| **FR-HOLD** 01–03 | ❌ | **Lỗ hổng lớn nhất** — xem §2 |
-| **FR-MATCH** 01–05 | ❌ | bảng `LostAlert` có, **0 code dùng tới** |
-| **FR-CAM** 01–04 | ❌ | bảng có, **0 code dùng tới** |
-| **FR-THANK** 01–03 | ❌ | bảng có, **0 code dùng tới** |
-| **FR-ADMIN** 01–06 | 🚧 **Đồng đội đang làm — ĐỪNG ĐỤNG** | Đã pull về một lần nhưng nhiều lỗi → **đang được làm lại**, nên hiện **không có trong nhánh này** (`Views/Admin/` không tồn tại, không có `AdminController`). Gồm: CRUD Category/Location/Tag, Unclaimed→Disposed, dashboard, trang xem AuditLog. Chỉ `AdminUsersController` (quản lý user/role = FR-AUTH-05) là đang có. |
+| **FR-HOLD** 01–03 | ✅ Xong | Custodial intake: tab "Chờ tiếp nhận" (`PendingDropoff`→`Open`, nhập nơi cất) + tab "Đã tiếp nhận" (kho: lọc trạng thái, sửa nơi cất). `HoldingController`/`HoldingService`, nav Staff/Admin |
+| **FR-MATCH** 01–05 | ❌ **đã quyết bỏ** | Bảng "Đồ bị mất" đã cho chỗ khai "tôi mất X"; chấp nhận **không auto-notify** khi có đồ trùng. `LostAlert` để không |
+| **FR-CAM** 01–04 | ✅ Xong | Kênh xin trích camera: member gửi (khu vực/giờ/mô tả) → staff phản hồi thẳng (Resolved/Rejected + ghi chú). `CameraController`/`CameraService`, một-bước |
+| **FR-THANK** 01–03 | ❌ **đã quyết bỏ** | bảng để không cũng vô hại; kéo theo FR-TL-03 khép luôn |
+| **FR-ADMIN** 01–06 | ✅ Xong (đã merge từ `main`) | CRUD Category/Location/Tag · Unclaimed→Disposed · dashboard · xem AuditLog · `AdminUsersController` (user/role). **Mình bổ sung**: màn "Quản lý bài đăng" (list mọi post + gỡ cascade + đăng hộ) và nút "Quét đồ quá hạn" (Open→Unclaimed) |
 
-**Ngoài spec (tự thêm):** bảng "Đồ bị mất" (`FR-LOST`) · bảng gộp `/Items` (found+lost, filter sidebar) · form đăng gộp · `/Items/Mine` "Bài đăng của tôi".
+**Vòng đời đồ nhặt giờ khép kín:** đăng → (Staff tiếp nhận nếu Custodial) → `Open` → claim/return **hoặc** quá 30 ngày không ai nhận → `Unclaimed` (sweep `UnclaimedSweepService` + `BackgroundService` chạy mỗi 24h, hoặc nút "Quét ngay") → admin `Disposed`.
 
-## 2. Làm gì tiếp — theo thứ tự đề xuất
+**Ngoài spec (tự thêm):** bảng "Đồ bị mất" (`FR-LOST`) · bảng gộp `/Items` (found+lost, filter sidebar) · form đăng gộp · `/Items/Mine` "Bài đăng của tôi" · admin "Quản lý bài đăng" (gỡ cascade + đăng hộ) · chặn đăng bài theo cờ `IsPostingBlocked` (mọi đường Create) · chọn lại ảnh bìa ở màn Sửa · Open→Unclaimed sweep + cron.
 
-1. **FR-HOLD** ← *nên làm trước*. Chọn "Ký gửi cho Staff" → đồ vào `PendingDropoff` và **kẹt vĩnh viễn**: không có màn Staff xác nhận nhận đồ để đẩy sang `Open`. Đây là **luồng chết** đang tồn tại trong app, không phải feature thiếu.
-2. **FR-NOTI-02/04 (SignalR)** — chuông hiện chỉ cập nhật khi load lại trang. Hạ tầng DB đã xong, chỉ cần Hub + push. Là "giá trị lõi realtime" của đồ án.
-3. **FR-MATCH** — giá trị lõi còn lại. ⚠️ Cần chốt thiết kế trước: spec dùng `LostAlert` (đăng ký theo dõi thụ động), nhưng ta **đã có bảng "Đồ bị mất" chủ động**. Phải quyết match với cái nào, đừng làm trùng.
-4. **FR-THANK** → chỗ hiện đã sẵn sàng (`Returned` giờ khách xem được).
-5. **FR-CAM**, **FR-CLAIM-06**.
+## 2. Làm gì tiếp
 
-> **Phân công:** **FR-ADMIN là của đồng đội** (đang làm lại sau khi bản đầu nhiều lỗi) — **không tự làm, không sửa chồng lên**. Phần còn lại ở trên là của mình.
+Luồng chính + các FR trong tầm đã xong. **Chỉ còn 1 thứ tuỳ chọn:**
+
+1. **FR-NOTI-02/04 (SignalR realtime)** — chuông đẩy realtime thay vì phải load lại trang. Hạ tầng DB + bell đã xong, chỉ cần Hub + push. Là "điểm cộng tự động hoá", không chặn luồng nào.
+
+> **Đã quyết bỏ:** **FR-MATCH** (bảng "Đồ bị mất" đã đủ, chấp nhận không auto-notify), **FR-THANK** (kéo FR-TL-03 khép luôn — `Returned` chốt timeline là hết), **FR-CLAIM-06**.
+
+> **Phân công (cập nhật):** FR-ADMIN vốn của đồng đội, **giờ đã merge vào nhánh này và xong**; mình đã bổ sung màn quản lý bài đăng + sweep Unclaimed. Trước khi sửa sâu vào khu admin, **phối hợp với đồng đội** tránh giẫm chân + tránh conflict lần nữa.
 
 ## 3. Việc còn nợ (đã biết, cố ý chưa làm)
 
@@ -58,6 +60,7 @@
 - **Razor gộp cả view thành 1 method** → biến pattern (`is DateTime at`) ở 2 khối khác nhau vẫn đụng scope (CS0128).
 - **Verify bằng curl:** Razor **HTML-encode output của `@expression`** thành entity (`ặ` → `&#x1EB7;`) còn chữ literal thì để nguyên → grep chữ tiếng Việt sẽ trượt. **Grep tên class**, đừng grep chuỗi hiển thị.
 - **`MSB3027`/`MSB3021` khi build** = app đang chạy giữ khoá `bin\...\LostAndFound.exe`, **không phải lỗi code** (compile đã xong, chết ở bước copy). Tắt app, hoặc `dotnet build -o <thư-mục-tạm>` để kiểm tra compile mà không tranh khoá.
+- **`main` có `db/schema.sql` dính trailing whitespace (~449 dòng), nhánh feature thì sạch (0)** → merge/rebase qua nhau sẽ **conflict NGUYÊN file schema** dù thay đổi thật rất nhỏ và không đè lên nhau (git không match nổi dòng nào vì khác khoảng trắng cuối dòng). Resolve về **bản sạch (không trailing-ws)** + ghép phần bên kia thêm vào, để các commit sau auto-merge thay vì conflict lại y hệt. Kiểm chứng bằng `diff --ignore-all-space` — delta thật thường chỉ vài bảng/cột. Fix tận gốc = strip trailing-ws trên `main`.
 
 ## 5. Chạy & test
 

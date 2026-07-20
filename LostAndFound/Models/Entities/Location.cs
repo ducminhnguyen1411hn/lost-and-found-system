@@ -15,7 +15,5 @@ public partial class Location
 
     public virtual ICollection<FoundItem> FoundItem { get; set; } = new List<FoundItem>();
 
-    public virtual ICollection<LostAlert> LostAlert { get; set; } = new List<LostAlert>();
-
     public virtual ICollection<LostItem> LostItem { get; set; } = new List<LostItem>();
 }

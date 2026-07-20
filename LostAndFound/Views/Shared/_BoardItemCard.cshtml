@@ -13,7 +13,7 @@
         <div class="ratio ratio-4x3 bg-light">
             @if (!string.IsNullOrWhiteSpace(Model.CoverImagePath))
             {
-                <img src="@Model.CoverImagePath" class="card-img-top object-fit-cover" alt="@Model.Title" />
+                <img src="@Model.CoverImagePath" class="card-img-top" style="object-fit:cover;" alt="@Model.Title" />
             }
             else
             {

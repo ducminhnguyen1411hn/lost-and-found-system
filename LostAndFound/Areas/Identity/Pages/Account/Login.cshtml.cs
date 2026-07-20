@@ -46,7 +46,7 @@ namespace LostAndFound.Areas.Identity.Pages.Account
             [DataType(DataType.Password)]
             public string Password { get; set; } = string.Empty;
 
-            [Display(Name = "Remember me")]
+            [Display(Name = "Ghi nhớ đăng nhập")]
             public bool RememberMe { get; set; }
         }
 

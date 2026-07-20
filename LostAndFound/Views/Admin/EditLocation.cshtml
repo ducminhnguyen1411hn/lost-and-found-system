@@ -1,6 +1,6 @@
 @model LostAndFound.Models.ViewModels.Admin.LocationEditViewModel
 @{
-    ViewData["Title"] = "Edit Location";
+    ViewData["Title"] = "Sửa địa điểm";
 }
 
 <div class="container mt-4 mb-5">
@@ -8,27 +8,27 @@
         <div class="col-md-8">
             <div class="card border-0 shadow-sm" style="border-radius: 8px;">
                 <div class="card-body p-4">
-                    <h4 class="fw-bold mb-4 text-dark">Edit Location</h4>
+                    <h4 class="fw-bold mb-4 text-dark">Sửa địa điểm</h4>
 
                     <form asp-action="EditLocation" method="post">
                         @Html.AntiForgeryToken()
                         <input type="hidden" asp-for="Id" />
 
                         <div class="mb-3">
-                            <label asp-for="Building" class="form-label fw-medium">Building (Optional)</label>
+                            <label asp-for="Building" class="form-label fw-medium">Toà nhà (tuỳ chọn)</label>
                             <input asp-for="Building" class="form-control" style="border-radius: 6px;" />
                             <span asp-validation-for="Building" class="text-danger small"></span>
                         </div>
 
                         <div class="mb-3">
-                            <label asp-for="Name" class="form-label fw-medium">Location Name</label>
+                            <label asp-for="Name" class="form-label fw-medium">Tên địa điểm</label>
                             <input asp-for="Name" class="form-control" style="border-radius: 6px;" />
                             <span asp-validation-for="Name" class="text-danger small"></span>
                         </div>
 
                         <div class="d-flex gap-2 mt-4">
-                            <button type="submit" class="btn btn-primary" style="border-radius: 6px;">Update Location</button>
-                            <a asp-action="Locations" class="btn btn-outline-secondary" style="border-radius: 6px;">Cancel</a>
+                            <button type="submit" class="btn btn-primary" style="border-radius: 6px;">Cập nhật địa điểm</button>
+                            <a asp-action="Locations" class="btn btn-outline-secondary" style="border-radius: 6px;">Huỷ</a>
                         </div>
                     </form>
                 </div>

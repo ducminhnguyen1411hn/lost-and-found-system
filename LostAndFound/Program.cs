@@ -75,6 +75,10 @@ namespace LostAndFound
             builder.Services.AddScoped<INotificationQueries, NotificationService>();
             builder.Services.AddScoped<IClaimService, ClaimService>();
             builder.Services.AddScoped<IItemBoardService, ItemBoardService>();
+            builder.Services.AddScoped<IHoldingService, HoldingService>();
+            builder.Services.AddScoped<IUnclaimedSweepService, UnclaimedSweepService>();
+            builder.Services.AddHostedService<UnclaimedSweepBackgroundService>();
+            builder.Services.AddScoped<ICameraService, CameraService>();
 
             var app = builder.Build();
 

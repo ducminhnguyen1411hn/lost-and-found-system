@@ -14,7 +14,7 @@
             <div class="container-fluid">
                 <a class="navbar-brand" asp-area="" asp-controller="Items" asp-action="Index">LostAndFound</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
+                        aria-expanded="false" aria-label="Bật/tắt điều hướng">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
@@ -30,6 +30,18 @@
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-controller="Claims" asp-action="My">Yêu cầu của tôi</a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Camera" asp-action="Mine">Xin trích camera</a>
+                            </li>
+                        }
+                        @if (User.IsInRole("Staff") || User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Holding" asp-action="Index">Đồ chờ tiếp nhận</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Camera" asp-action="Index">Yêu cầu camera</a>
+                            </li>
                         }
                         @if (User.IsInRole("Admin"))
                         {
@@ -38,7 +50,7 @@
                                     Quản trị
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="adminDropdown">
-                                    <li><a class="dropdown-item" asp-area="" asp-controller="Admin" asp-action="Index">Dashboard</a></li>
+                                    <li><a class="dropdown-item" asp-area="" asp-controller="Admin" asp-action="Index">Bảng điều khiển</a></li>
                                     <li><a class="dropdown-item" asp-area="" asp-controller="Admin" asp-action="Categories">Danh mục</a></li>
                                     <li><a class="dropdown-item" asp-area="" asp-controller="Admin" asp-action="Locations">Địa điểm</a></li>
                                     <li><a class="dropdown-item" asp-area="" asp-controller="Admin" asp-action="Tags">Thẻ</a></li>
