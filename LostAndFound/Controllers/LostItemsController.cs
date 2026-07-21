@@ -12,7 +12,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LostAndFound.Controllers;
 
-/// <summary>Thin controller for the public lost-item board (mirrors FoundItemsController).</summary>
 public class LostItemsController : Controller
 {
     private readonly ILostItemService _service;
@@ -24,8 +23,6 @@ public class LostItemsController : Controller
         _db = db;
     }
 
-    /// <summary>True when an admin has flagged the signed-in user IsPostingBlocked. This direct
-    /// /LostItems/Create path is legacy (the nav routes through Items/Create) but still reachable.</summary>
     private async Task<bool> IsPostingBlockedAsync()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -33,7 +30,6 @@ public class LostItemsController : Controller
         return user is not null && user.IsPostingBlocked;
     }
 
-    // GET /LostItems — replaced by the unified board; keep a permanent redirect for old links/bookmarks.
     [AllowAnonymous]
     [HttpGet]
     public IActionResult Index() => RedirectToActionPermanent("Index", "Items", new { kind = ItemKind.Lost });

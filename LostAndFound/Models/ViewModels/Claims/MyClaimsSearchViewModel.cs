@@ -3,7 +3,6 @@ using LostAndFound.Models.ViewModels.Common;
 
 namespace LostAndFound.Models.ViewModels.Claims;
 
-/// <summary>"Yêu cầu của tôi" filter+paging state. Status null = tất cả.</summary>
 public class MyClaimsSearchViewModel
 {
     public ClaimStatus? Status { get; set; }

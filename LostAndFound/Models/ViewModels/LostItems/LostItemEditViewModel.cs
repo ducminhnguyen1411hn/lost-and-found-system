@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace LostAndFound.Models.ViewModels.LostItems;
 
-/// <summary>Edit-a-lost-item form (owner-only). New images append; tick existing ones to remove.</summary>
 public class LostItemEditViewModel
 {
     public int Id { get; set; }
@@ -41,7 +40,6 @@ public class LostItemEditViewModel
 
     public List<int> RemoveImageIds { get; set; } = new();
 
-    /// <summary>Existing-image Id the user picked as the cover (gets SortOrder 0). Defaults to the current cover.</summary>
     public int? CoverImageId { get; set; }
 
     public IReadOnlyList<ImageItem> ExistingImages { get; set; } = Array.Empty<ImageItem>();

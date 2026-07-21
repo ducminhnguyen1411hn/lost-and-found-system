@@ -2,9 +2,9 @@
 @{
     var isFound = Model.Kind == ItemKind.Found;
     var controller = isFound ? "FoundItems" : "LostItems";
-    // The type pill only carries information while both sides are listed together.
+
     var showPill = (bool)(ViewData["ShowKindPill"] ?? true);
-    // Status badge is for the owner's own list; the public board is Open-only so it would say nothing.
+
     var showStatus = (bool)(ViewData["ShowStatus"] ?? false);
 }
 
@@ -20,11 +20,7 @@
                 <div class="d-flex align-items-center justify-content-center text-muted small">Không có ảnh</div>
             }
         </div>
-        @* This badge MUST stay OUTSIDE .ratio. Bootstrap's `.ratio > *` forces every direct child to
-           position:absolute; width:100%; height:100% — so a bg-dark badge in there stretched over the whole
-           photo and painted it solid black (only the m-2 margin let the image peek out at the edges).
-           Anchored on .card instead, which is already position-relative.
-           Also: .badge sets color:#fff itself, so bg-* is all it needs — text-bg-* is 5.2+ and this is 5.1. *@
+
         @if (Model.ImageCount > 1)
         {
             <span class="badge bg-dark position-absolute top-0 end-0 m-2">📷 @Model.ImageCount</span>

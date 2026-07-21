@@ -8,12 +8,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LostAndFound.Services;
 
-/// <summary>
-/// FR-NOTI (partial): implements the shared push contract by WRITING a Notification row. SignalR realtime
-/// push is deferred to FR-NOTI (Dev B) — a seam is marked below. Also serves the bell reads
-/// (INotificationQueries). Push methods do NOT open their own transaction: when a business service calls
-/// PushAsync inside its transaction, the row commits atomically with the business change (like AuditService).
-/// </summary>
 public class NotificationService : INotificationService, INotificationQueries
 {
     private readonly ApplicationDbContext _db;
@@ -25,8 +19,6 @@ public class NotificationService : INotificationService, INotificationQueries
         _users = users;
     }
 
-    // ---- INotificationService (write / push) ----
-
     public async Task PushAsync(string recipientUserId, string type, string title, string message, string linkUrl)
     {
         _db.Notification.Add(new Notification
@@ -37,10 +29,10 @@ public class NotificationService : INotificationService, INotificationQueries
             Message = string.IsNullOrWhiteSpace(message) ? null : message,
             LinkUrl = string.IsNullOrWhiteSpace(linkUrl) ? null : linkUrl,
             IsRead = false
-            // CreatedAt is store-generated.
+
         });
         await _db.SaveChangesAsync();
-        // TODO (FR-NOTI): push realtime to SignalR group == recipientUserId here.
+
     }
 
     public async Task PushToStaffAsync(string type, string title, string message, string linkUrl)
@@ -57,10 +49,8 @@ public class NotificationService : INotificationService, INotificationQueries
                 IsRead = false
             });
         await _db.SaveChangesAsync();
-        // TODO (FR-NOTI): push realtime to SignalR group "staff" here.
-    }
 
-    // ---- INotificationQueries (read / bell) ----
+    }
 
     public Task<int> GetUnreadCountAsync(string userId) =>
         _db.Notification.AsNoTracking().CountAsync(n => n.RecipientUserId == userId && !n.IsRead);

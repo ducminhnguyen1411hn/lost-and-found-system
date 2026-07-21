@@ -5,7 +5,7 @@
     ViewData["BoardHeading"] = "Bài đăng của tôi";
     ViewData["BoardEmpty"] = "Bạn chưa có bài đăng nào khớp bộ lọc.";
     ViewData["ShowKindPill"] = !Model.Kind.HasValue;
-    ViewData["ShowStatus"] = true; // unlike the public board, your own posts can be in any status
+    ViewData["ShowStatus"] = true;
 }
 
 @if (TempData["SuccessMessage"] != null)

@@ -97,7 +97,6 @@
             </div>
         }
 
-        @* Same partial as the item page — one source of truth for the handover UI. *@
         @if (Model.Handover is not null)
         {
             <partial name="_HandoverPanel" model="Model.Handover" />
@@ -153,8 +152,6 @@
     </div>
 </div>
 
-@* Live chat without SignalR: poll the Messages endpoint every few seconds and append new bubbles.
-   Send goes through AJAX so neither side reloads. All auth is enforced server-side by the endpoint. *@
 <script>
     (function () {
         var box = document.getElementById('chatBox');
@@ -183,7 +180,7 @@
             meta.textContent = m.sender + ' · ' + m.at;
             var body = document.createElement('div');
             body.style.whiteSpace = 'pre-wrap';
-            body.textContent = m.body;                 // textContent (not innerHTML) => XSS-safe
+            body.textContent = m.body;
             bubble.appendChild(meta);
             bubble.appendChild(body);
             row.appendChild(bubble);
@@ -193,7 +190,7 @@
 
         var busy = false;
         function poll() {
-            if (busy || document.hidden) return;       // don't stack requests / poll a hidden tab
+            if (busy || document.hidden) return;
             busy = true;
             fetch(url + '?id=' + claimId + '&afterId=' + lastId, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(function (r) { return r.ok ? r.json() : null; })

@@ -7,11 +7,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LostAndFound.Data;
 
-/// <summary>
-/// Foundation seeding: the 3 roles + Starter Users (Admin, Staff, Member) for FR-AUTH-04.
-/// Idempotent (safe to run on every startup).
-/// Note: Guest is not a role - it's the state of unauthenticated users.
-/// </summary>
 public static class SeedData
 {
     public static readonly string[] Roles = { "Member", "Staff", "Admin" };
@@ -35,9 +30,6 @@ public static class SeedData
 
         var userManager = sp.GetRequiredService<UserManager<ApplicationUser>>();
 
-        // ==========================================
-        // Starter Admin
-        // ==========================================
         if (await userManager.FindByEmailAsync(AdminEmail) == null)
         {
             var admin = new ApplicationUser
@@ -55,9 +47,6 @@ public static class SeedData
             }
         }
 
-        // ==========================================
-        // Sample Staff account (FR-AUTH-04)
-        // ==========================================
         string staffEmail = "staff@lostandfound.local";
         if (await userManager.FindByEmailAsync(staffEmail) == null)
         {
@@ -76,9 +65,6 @@ public static class SeedData
             }
         }
 
-        // ==========================================
-        // Sample Member account (FR-AUTH-04)
-        // ==========================================
         string memberEmail = "member@lostandfound.local";
         if (await userManager.FindByEmailAsync(memberEmail) == null)
         {
@@ -97,15 +83,11 @@ public static class SeedData
             }
         }
 
-        // ==========================================
-        // Sample master data (FR-AUTH-04): 2-level Category + Location.
-        // Needed by the FR-FOUND report form dropdowns. Idempotent.
-        // ==========================================
         var db = sp.GetRequiredService<ApplicationDbContext>();
 
         if (!await db.Category.AnyAsync())
         {
-            // 2-level Vietnamese category tree. A parent with no children (e.g. "Khác") is itself selectable.
+
             var tree = new (string Parent, string[] Children)[]
             {
                 ("Điện tử", new[] { "Điện thoại", "Laptop", "Máy tính bảng", "Tai nghe", "Sạc & Cáp", "Chuột & Bàn phím", "Đồng hồ thông minh" }),
@@ -119,7 +101,7 @@ public static class SeedData
             {
                 var p = new Category { Name = parent };
                 db.Category.Add(p);
-                await db.SaveChangesAsync(); // assign parent Id
+                await db.SaveChangesAsync();
                 foreach (var ch in children)
                     db.Category.Add(new Category { Name = ch, ParentId = p.Id });
             }
@@ -144,8 +126,7 @@ public static class SeedData
             await db.SaveChangesAsync();
         }
 
-        // Demo datasets (run once, when their table is empty).
-        await SeedDemoData.SeedAsync(db, userManager, sp.GetRequiredService<ITagService>());          // ~100 found items
-        await SeedDemoData.SeedLostItemsAsync(db, userManager, sp.GetRequiredService<ITagService>()); // ~24 lost items
+        await SeedDemoData.SeedAsync(db, userManager, sp.GetRequiredService<ITagService>());
+        await SeedDemoData.SeedLostItemsAsync(db, userManager, sp.GetRequiredService<ITagService>());
     }
 }

@@ -7,13 +7,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LostAndFound.Services;
 
-/// <summary>
-/// The unified board (found + lost in one list). The two sides live in different tables, so the union
-/// happens in SQL over a SCALAR-ONLY projection (<see cref="BoardRow"/>): collections/correlated
-/// subqueries inside a set operation don't translate, so tags and images are hydrated afterwards for
-/// just the current page's rows. Public visibility differs per side and must NOT be unified:
-/// FoundItemStatus.Open = 1 but LostItemStatus.Open = 0.
-/// </summary>
 public class ItemBoardService : IItemBoardService
 {
     private const int MaxPageSize = 60;
@@ -27,8 +20,6 @@ public class ItemBoardService : IItemBoardService
         _tags = tags;
     }
 
-    /// <summary>Union row — scalars only (column reads + joins). Nothing here may be a collection
-    /// or a correlated subquery, or the Concat below stops translating.</summary>
     private sealed class BoardRow
     {
         public int Id { get; set; }
@@ -41,11 +32,9 @@ public class ItemBoardService : IItemBoardService
         public int Status { get; set; }
     }
 
-    /// <inheritdoc />
     public async Task<PagedResult<BoardItemViewModel>> SearchAsync(BoardSearchViewModel q, string? ownerUserId = null)
     {
-        // null = public board (Open only, all owners). Non-null = that user's own posts, every status.
-        // See IItemBoardService: this is deliberately NOT model-bound.
+
         var mine = ownerUserId is not null;
         var page = q.Page < 1 ? 1 : q.Page;
         var pageSize = q.PageSize < 1 ? 12 : Math.Min(q.PageSize, MaxPageSize);
@@ -53,12 +42,8 @@ public class ItemBoardService : IItemBoardService
         var kw = string.IsNullOrWhiteSpace(q.Keyword) ? null : q.Keyword.Trim();
         var norm = string.IsNullOrWhiteSpace(q.Tag) ? null : _tags.Normalize(q.Tag);
         DateTime? fromUtc = q.From is DateTime f ? AppTime.ToUtc(f) : null;
-        DateTime? toUtc = q.To is DateTime t ? AppTime.ToUtc(t).AddMinutes(1) : null; // inclusive of the "to" minute
+        DateTime? toUtc = q.To is DateTime t ? AppTime.ToUtc(t).AddMinutes(1) : null;
 
-        // Category is a 2-level tree and items are filed on the LEAF, so a parent almost always holds zero
-        // items of its own. Matching CategoryId exactly made picking a parent ("Ví & Túi") return 0 results
-        // while its children (Ví/Bóp, Túi xách, Balo) held them all. Resolve self + children once here, then
-        // match with Contains on both branches. Depth is fixed at 2, so one level of children is enough.
         List<int>? catIds = null;
         if (q.CategoryId is int cat)
             catIds = await _db.Category.AsNoTracking()
@@ -68,10 +53,10 @@ public class ItemBoardService : IItemBoardService
 
         IQueryable<BoardRow>? union = null;
 
-        if (q.Kind != ItemKind.Lost) // "Tất cả" or "Đồ nhặt được"
+        if (q.Kind != ItemKind.Lost)
         {
             var fq = _db.FoundItem.AsNoTracking();
-            // Owner sees every status of their own posts; the public sees only Open.
+
             fq = mine
                 ? fq.Where(x => x.ReporterUserId == ownerUserId)
                 : fq.Where(x => x.Status == (int)FoundItemStatus.Open);
@@ -95,10 +80,10 @@ public class ItemBoardService : IItemBoardService
             });
         }
 
-        if (q.Kind != ItemKind.Found) // "Tất cả" or "Đồ bị mất"
+        if (q.Kind != ItemKind.Found)
         {
             var lq = _db.LostItem.AsNoTracking();
-            // NB: LostItemStatus.Open = 0 while FoundItemStatus.Open = 1 — the two scales differ.
+
             lq = mine
                 ? lq.Where(x => x.OwnerUserId == ownerUserId)
                 : lq.Where(x => x.Status == (int)LostItemStatus.Open);
@@ -129,7 +114,6 @@ public class ItemBoardService : IItemBoardService
 
         var total = await union.CountAsync();
 
-        // ThenBy(Id) keeps pagination deterministic when two rows share CreatedAt across the union.
         var rows = await union
             .OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id)
             .Skip((page - 1) * pageSize)
@@ -139,10 +123,6 @@ public class ItemBoardService : IItemBoardService
         var foundIds = rows.Where(r => r.Kind == (int)ItemKind.Found).Select(r => r.Id).ToList();
         var lostIds = rows.Where(r => r.Kind == (int)ItemKind.Lost).Select(r => r.Id).ToList();
 
-        // Hydrate tags + cover/count for THIS PAGE only (small IN-lists), not for the whole result set.
-        // NOTE: declared with an explicit type (not `var`) so the two ternary branches — an empty
-        // List<(int Id, ...)> literal vs. a projected .Select(x => (x.FoundItemId, ...)).ToList() —
-        // unify via tuple identity conversion despite their differing inferred element names.
         List<(int Id, string Tag)> fTags = foundIds.Count == 0
             ? new List<(int Id, string Tag)>()
             : (await _db.FoundItemTag.AsNoTracking().Where(ft => foundIds.Contains(ft.FoundItemId))

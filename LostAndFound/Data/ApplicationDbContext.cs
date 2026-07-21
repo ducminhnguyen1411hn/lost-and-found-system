@@ -5,15 +5,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LostAndFound.Data;
 
-/// <summary>
-/// The single runtime EF Core context. It IS an <see cref="IdentityDbContext{TUser}"/> (so all
-/// AspNet* Identity tables + role logic work out of the box) AND hosts the domain entities that
-/// were generated from the database into <c>Models/Entities</c> by the DB-First scaffold.
-///
-/// HAND-WRITTEN and authoritative. When the schema changes: edit <c>db/schema.sql</c>, recreate the
-/// DB, re-run the scaffold (see <c>Data/Scaffolded/README.md</c>), then copy any new DbSets / config
-/// from the regenerated ScaffoldDbContext into the OnModelCreating block below.
-/// </summary>
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
@@ -21,7 +12,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
     }
 
-    // ---- Domain tables (entities are generated; these DbSets are hand-declared) ----
     public DbSet<Category> Category => Set<Category>();
     public DbSet<Location> Location => Set<Location>();
     public DbSet<Tag> Tag => Set<Tag>();
@@ -38,20 +28,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Notification> Notification => Set<Notification>();
     public DbSet<AuditLog> AuditLog => Set<AuditLog>();
 
-    // Identity users (for admin queries)
     public new DbSet<ApplicationUser> Users => Set<ApplicationUser>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // Identity table mapping MUST run first.
-        base.OnModelCreating(modelBuilder);
 
-        // ===================================================================
-        // Domain config — copied verbatim from the DB-First scaffold output
-        // (Data/Scaffolded/ScaffoldDbContext.cs). Keep in sync on re-scaffold.
-        // FKs to AspNetUsers are intentionally plain scalar columns (no nav),
-        // because the user tables are excluded from the scaffold selection set.
-        // ===================================================================
+        base.OnModelCreating(modelBuilder);
 
         modelBuilder.Entity<AuditLog>(entity =>
         {
@@ -145,10 +127,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
             entity.Property(e => e.Description).HasMaxLength(2000);
             entity.Property(e => e.PrivateMarks).HasMaxLength(1000);
-            // NOTE: intentionally NOT HasDefaultValue(1). With an EF store-default, EF treats the CLR
-            // default (0 == PendingDropoff, a real Custodial status) as "unset" and omits it on INSERT,
-            // so Custodial items would wrongly persist as Open. The service always sets Status explicitly;
-            // the DB column default 1 still guards raw inserts. Keep this removed after any re-scaffold.
+
             entity.Property(e => e.StorageLocation).HasMaxLength(200);
             entity.Property(e => e.Title).HasMaxLength(200);
 

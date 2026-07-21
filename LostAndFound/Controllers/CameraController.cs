@@ -7,8 +7,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace LostAndFound.Controllers;
 
-/// <summary>Camera-check requests (FR-CAM). Members create/track requests; Staff (+Admin) triage the queue
-/// and respond. One-step flow: Staff answers Pending directly with Resolved / Rejected + a note.</summary>
 [Authorize]
 public class CameraController : Controller
 {
@@ -21,7 +19,6 @@ public class CameraController : Controller
 
     private string Uid => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-    // GET: /Camera/Create
     [HttpGet]
     public async Task<IActionResult> Create()
     {
@@ -29,7 +26,6 @@ public class CameraController : Controller
         return View(vm);
     }
 
-    // POST: /Camera/Create
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(CameraRequestCreateViewModel vm)
@@ -48,7 +44,6 @@ public class CameraController : Controller
         return RedirectToAction(nameof(Mine));
     }
 
-    // GET: /Camera/Mine
     [HttpGet]
     public async Task<IActionResult> Mine()
     {
@@ -56,7 +51,6 @@ public class CameraController : Controller
         return View(model);
     }
 
-    // GET: /Camera  — Staff queue
     [HttpGet]
     [Authorize(Roles = "Staff,Admin")]
     public async Task<IActionResult> Index(CameraRequestStatus? status)
@@ -65,7 +59,6 @@ public class CameraController : Controller
         return View(model);
     }
 
-    // POST: /Camera/Respond
     [HttpPost]
     [Authorize(Roles = "Staff,Admin")]
     [ValidateAntiForgeryToken]

@@ -2,23 +2,19 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <!-- Pin C# to the .NET 8 language level even though the build SDK is .NET 10. -->
+
     <LangVersion>12.0</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>8a9f12e6-9255-45a6-874a-a0dd6a47f6de</UserSecretsId>
   </PropertyGroup>
 
-  <!-- Some machines' Application Control / Smart App Control policy blocks the unsigned apphost
-       (LostAndFound.exe), so `dotnet run` / F5 fail with "An Application Control policy has blocked
-       this file". Skip generating the apphost in Debug — the app then runs via the signed `dotnet`
-       host (dotnet run / launch the .dll), which is allowed. Release still builds an apphost. -->
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <UseAppHost>false</UseAppHost>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- EF Core (DB-First) + ASP.NET Core Identity + default Identity UI. All pinned to the 8.0.x line. -->
+
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.*" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.*">
@@ -28,8 +24,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.*" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.*" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.23" />
-    <!-- SignalR server needs no package: it ships in the Microsoft.AspNetCore.App framework reference. -->
-    <!-- Third-party image host for found-item photos (FR-FOUND-05). Not a Microsoft.* pkg, so exempt from the 8.0.x pin. -->
+
     <PackageReference Include="CloudinaryDotNet" Version="1.27.*" />
   </ItemGroup>
 

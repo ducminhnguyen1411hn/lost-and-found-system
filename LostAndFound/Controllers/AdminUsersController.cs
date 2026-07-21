@@ -1,4 +1,4 @@
-﻿using LostAndFound.Models;
+using LostAndFound.Models;
 using LostAndFound.Models.ViewModels.Admin;
 using LostAndFound.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -23,7 +23,6 @@ namespace LostAndFound.Controllers
             _audit = audit;
         }
 
-        // GET: /AdminUsers
         public async Task<IActionResult> Index()
         {
             var users = await _userManager.Users.ToListAsync();
@@ -44,7 +43,6 @@ namespace LostAndFound.Controllers
             return View(model);
         }
 
-        // GET: /AdminUsers/Edit/{id}
         public async Task<IActionResult> Edit(string id)
         {
             if (string.IsNullOrEmpty(id)) return NotFound();
@@ -65,7 +63,7 @@ namespace LostAndFound.Controllers
             };
 
             var validRoles = new[] { "Member", "Staff", "Admin" };
-            foreach(var role in allRoles.Where(r => validRoles.Contains(r.Name)))
+            foreach (var role in allRoles.Where(r => validRoles.Contains(r.Name)))
             {
                 model.Roles.Add(new RoleSelectionViewModel
                 {
@@ -77,15 +75,13 @@ namespace LostAndFound.Controllers
             return View(model);
         }
 
-        // POST: /AdminUsers/Edit
         [HttpPost]
-        [ValidateAntiForgeryToken] // Chống tấn công CSRF bảo mật cho Admin
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(EditUserRolesViewModel model, string selectedRole)
         {
             var user = await _userManager.FindByIdAsync(model.UserId);
             if (user == null) return NotFound();
 
-            // CHỐT CHẶN BẢO MẬT 1: Admin không được tự gỡ quyền Admin của chính mình
             var currentLoggedInUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (user.Id == currentLoggedInUserId && selectedRole != "Admin")
@@ -94,7 +90,6 @@ namespace LostAndFound.Controllers
                 return View(model);
             }
 
-            // CHỐT CHẶN BẢO MẬT 2: Không cho phép xóa vị Admin cuối cùng trong hệ thống
             if (selectedRole != "Admin")
             {
                 var allAdmins = await _userManager.GetUsersInRoleAsync("Admin");
@@ -105,21 +100,18 @@ namespace LostAndFound.Controllers
                 }
             }
 
-            // CHỐT CHẶN BẢO MẬT 3: Admin không được tự chặn chính mình
             if (user.Id == currentLoggedInUserId && model.IsBlocked)
             {
                 ModelState.AddModelError(string.Empty, "Không thể tự khoá tài khoản của bạn.");
                 return View(model);
             }
 
-            // Đảm bảo chỉ có 1 role được chọn
             if (string.IsNullOrEmpty(selectedRole))
             {
                 ModelState.AddModelError(string.Empty, "Mỗi người dùng phải có ít nhất một role.");
                 return View(model);
             }
 
-            // CHỐT CHẶN BẢO MẬT 4: Chỉ cho phép gán 3 roles hợp lệ
             var validRoles = new[] { "Member", "Staff", "Admin" };
             if (!validRoles.Contains(selectedRole))
             {
@@ -128,24 +120,21 @@ namespace LostAndFound.Controllers
             }
 
             var currentRoles = await _userManager.GetRolesAsync(user);
-            // Snapshot BEFORE mutating, so we can audit exactly what changed.
+
             var oldRole = currentRoles.FirstOrDefault();
             var wasBlocked = user.IsBlocked;
             var wasPostingBlocked = user.IsPostingBlocked;
 
-            // Xóa tất cả roles hiện tại và chỉ gán role được chọn (đảm bảo 1 role duy nhất)
             if (currentRoles.Any())
             {
                 await _userManager.RemoveFromRolesAsync(user, currentRoles);
             }
             await _userManager.AddToRoleAsync(user, selectedRole);
 
-            // Cập nhật blocking flags
             user.IsBlocked = model.IsBlocked;
             user.IsPostingBlocked = model.IsPostingBlocked;
             await _userManager.UpdateAsync(user);
 
-            // FR-LOG: these role/block changes are the most sensitive admin actions; log each real change.
             var actorId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
             if (oldRole != selectedRole)
                 await _audit.LogAsync(actorId, "RoleChanged", "User", user.Id,

@@ -6,8 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace LostAndFound.Controllers;
 
-/// <summary>Staff-side custodial intake queue (FR-HOLD-02): confirm receipt of dropped-off items so they
-/// go public and become claimable. Custodial items are otherwise stuck in PendingDropoff forever.</summary>
 [Authorize(Roles = "Staff,Admin")]
 public class HoldingController : Controller
 {
@@ -20,14 +18,12 @@ public class HoldingController : Controller
 
     private string Uid => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-    // GET: /Holding
     public async Task<IActionResult> Index()
     {
         var model = await _holding.GetPendingIntakeAsync();
         return View(model);
     }
 
-    // POST: /Holding/Confirm
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Confirm(int id, string storageLocation)
@@ -45,14 +41,12 @@ public class HoldingController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // GET: /Holding/Stored?status=
     public async Task<IActionResult> Stored(FoundItemStatus? status)
     {
         var model = await _holding.GetStoredAsync(status);
         return View(model);
     }
 
-    // POST: /Holding/UpdateStorage
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateStorage(int id, string storageLocation, FoundItemStatus? status)

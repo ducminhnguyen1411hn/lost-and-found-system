@@ -28,7 +28,7 @@
                                 {
                                     @foreach (var parent in ViewBag.ParentCategories as List<LostAndFound.Models.ViewModels.Admin.CategoryViewModel>)
                                     {
-                                        // Don't show self or descendants as options
+
                                         if (parent.Id != Model.Id && parent.ParentId == null)
                                         {
                                             <option value="@parent.Id" selected="@(parent.Id == Model.ParentId)">@parent.Name</option>

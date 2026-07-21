@@ -10,8 +10,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LostAndFound.Services;
 
-/// <summary>All FR-CLAIM rules & transitions. Each mutation = one transaction (change + AuditLog +
-/// Notification, atomic). Blind listing enforced by construction. See IClaimService.</summary>
 public class ClaimService : IClaimService
 {
     private const string EvidenceFolder = "lostandfound/claims";
@@ -33,7 +31,6 @@ public class ClaimService : IClaimService
 
     private static string? Uid(ClaimsPrincipal u) => u.FindFirstValue(ClaimTypes.NameIdentifier);
 
-    /// <summary>Holder = reporter if SelfHeld, custodian staff if Custodial. Admin always allowed to act.</summary>
     private static bool IsHolderOrAdmin(FoundItem item, ClaimsPrincipal user)
     {
         var uid = Uid(user);
@@ -64,16 +61,14 @@ public class ClaimService : IClaimService
             .Include(f => f.FoundItemImage)
             .FirstOrDefaultAsync(f => f.Id == foundItemId);
         if (item is null) return null;
-        if ((FoundItemStatus)item.Status != FoundItemStatus.Open) return null;   // only Open is claimable
-        if (uid == item.ReporterUserId || IsHolder(item, uid)) return null;      // can't claim your own/held item
+        if ((FoundItemStatus)item.Status != FoundItemStatus.Open) return null;
+        if (uid == item.ReporterUserId || IsHolder(item, uid)) return null;
 
         var hasActive = await _db.Claim.AsNoTracking().AnyAsync(c =>
             c.FoundItemId == foundItemId && c.ClaimantUserId == uid &&
             (c.Status == (int)ClaimStatus.Pending || c.Status == (int)ClaimStatus.Accepted));
         if (hasActive) return null;
 
-        // Prefill contact info from the claimant's own profile — holder-only field, but the claimant
-        // is free to edit or clear it before submitting (not enforced/re-validated as "must match profile").
         var profile = await _db.Users.AsNoTracking()
             .Where(u => u.Id == uid).Select(u => new { u.PhoneNumber, u.Email }).FirstOrDefaultAsync();
 
@@ -108,7 +103,6 @@ public class ClaimService : IClaimService
         if (files.Count > MaxEvidence)
             throw new InvalidOperationException($"Tối đa {MaxEvidence} ảnh bằng chứng.");
 
-        // Upload BEFORE the transaction (network I/O must not hold a tx open).
         var urls = new List<string>();
         foreach (var f in files)
         {
@@ -126,26 +120,21 @@ public class ClaimService : IClaimService
             ContactPhone = string.IsNullOrWhiteSpace(vm.ContactPhone) ? null : vm.ContactPhone.Trim(),
             ContactEmail = string.IsNullOrWhiteSpace(vm.ContactEmail) ? null : vm.ContactEmail.Trim(),
             Status = (int)ClaimStatus.Pending
-            // CreatedAt store-generated.
+
         };
         _db.Claim.Add(claim);
-        await _db.SaveChangesAsync(); // get claim.Id
+        await _db.SaveChangesAsync();
 
         for (int i = 0; i < urls.Count; i++)
             _db.ClaimImage.Add(new ClaimImage { ClaimId = claim.Id, Url = urls[i], SortOrder = i });
         if (urls.Count > 0) await _db.SaveChangesAsync();
 
-        // Two rows, on purpose:
-        // 1) the private audit-trail record, scoped to the Claim and naming the claimant.
         await _audit.LogAsync(uid, "ClaimSubmitted", "Claim", claim.Id.ToString(),
             null, ClaimStatus.Pending.ToString(), "Gửi yêu cầu nhận lại", isPublic: false);
-        // 2) the public milestone on the ITEM timeline. Actor deliberately empty and no name in the
-        //    detail, so the timeline shows THAT a claim arrived without outing WHO sent it (the "who"
-        //    lives on Claim.ClaimantUserId, visible to the holder only). Same rule as the handover rows.
+
         await _audit.LogAsync("", "ClaimSubmitted", "FoundItem", item.Id.ToString(),
             null, null, "Có người gửi yêu cầu nhận lại", isPublic: true);
 
-        // Notify the holder.
         var holderId = (HoldingType)item.HoldingType == HoldingType.SelfHeld ? item.ReporterUserId : item.CustodianStaffId;
         if (!string.IsNullOrEmpty(holderId))
             await _notify.PushAsync(holderId, "ClaimSubmitted", "Có yêu cầu nhận lại",
@@ -175,14 +164,12 @@ public class ClaimService : IClaimService
         claim.HandledAt = now;
 
         item.Status = (int)FoundItemStatus.ClaimAccepted;
-        // A fresh handover starts here — clear both flags AND their timestamps, or a stale time from a
-        // previously cancelled acceptance would show against the new claimant.
+
         item.HolderConfirmedHandover = false;
         item.ClaimantConfirmedHandover = false;
         item.HolderConfirmedAt = null;
         item.ClaimantConfirmedAt = null;
 
-        // Auto-reject every OTHER pending claim on this item.
         var others = await _db.Claim
             .Where(c => c.FoundItemId == item.Id && c.Id != claim.Id && c.Status == (int)ClaimStatus.Pending)
             .ToListAsync();
@@ -195,12 +182,10 @@ public class ClaimService : IClaimService
         }
         await _db.SaveChangesAsync();
 
-        // Public item event (no names/verification).
         await _audit.LogAsync(uid, "ClaimAccepted", "FoundItem", item.Id.ToString(),
             FoundItemStatus.Open.ToString(), FoundItemStatus.ClaimAccepted.ToString(),
             "Đã chấp nhận một yêu cầu nhận lại", isPublic: true);
 
-        // Notify the accepted claimant + each auto-rejected claimant.
         await _notify.PushAsync(claim.ClaimantUserId, "ClaimAccepted", "Yêu cầu nhận lại được chấp nhận",
             $"Yêu cầu nhận lại '{item.Title}' của bạn đã được chấp nhận. Hãy hẹn nhận đồ.", ItemLink(item.Id));
         foreach (var o in others)
@@ -231,7 +216,6 @@ public class ClaimService : IClaimService
         claim.RejectReason = rejectReason.Trim();
         await _db.SaveChangesAsync();
 
-        // Private audit (has the reason).
         await _audit.LogAsync(uid, "ClaimRejected", "Claim", claim.Id.ToString(),
             ClaimStatus.Pending.ToString(), ClaimStatus.Rejected.ToString(), "Từ chối yêu cầu nhận lại", isPublic: false);
 
@@ -252,7 +236,7 @@ public class ClaimService : IClaimService
         if (!IsHolderOrAdmin(item, user)) return false;
 
         item.HolderConfirmedHandover = true;
-        item.HolderConfirmedAt = DateTime.UtcNow; // UTC like every stored time; views convert via AppTime
+        item.HolderConfirmedAt = DateTime.UtcNow;
         return await FinalizeHandoverAsync(item, "Người giữ xác nhận đã bàn giao", holderActed: true);
     }
 
@@ -266,15 +250,13 @@ public class ClaimService : IClaimService
 
         var accepted = await _db.Claim.FirstOrDefaultAsync(c =>
             c.FoundItemId == foundItemId && c.Status == (int)ClaimStatus.Accepted);
-        if (accepted is null || accepted.ClaimantUserId != uid) return false; // only the accepted claimant
+        if (accepted is null || accepted.ClaimantUserId != uid) return false;
 
         item.ClaimantConfirmedHandover = true;
         item.ClaimantConfirmedAt = DateTime.UtcNow;
         return await FinalizeHandoverAsync(item, "Người nhận xác nhận đã nhận", holderActed: false);
     }
 
-    /// <summary>Shared tail: write the confirmation audit, flip to Returned if both flags true, notify the
-    /// counterpart. Assumes the caller has set the relevant flag on the tracked <paramref name="item"/>.</summary>
     private async Task<bool> FinalizeHandoverAsync(FoundItem item, string publicDetail, bool holderActed)
     {
         var accepted = await _db.Claim.FirstOrDefaultAsync(c =>
@@ -285,13 +267,8 @@ public class ClaimService : IClaimService
 
         var from = FoundItemStatus.ClaimAccepted;
 
-        // Persist THIS side's confirmation flag first (the caller already set it on the tracked item).
         await _db.SaveChangesAsync();
 
-        // Re-read the authoritative flags from the DB. The FoundItem row lock serializes us against the
-        // other party, so if BOTH confirmed — even near-simultaneously — exactly one transaction observes
-        // both flags true here and flips the item to Returned. Deciding from the pre-transaction in-memory
-        // copy (as before) let both sides miss it and stranded the item at ClaimAccepted forever.
         await _db.Entry(item).ReloadAsync();
         var bothConfirmed = item.HolderConfirmedHandover && item.ClaimantConfirmedHandover;
         if (bothConfirmed && (FoundItemStatus)item.Status == FoundItemStatus.ClaimAccepted)
@@ -300,13 +277,9 @@ public class ClaimService : IClaimService
             await _db.SaveChangesAsync();
         }
 
-        // Public milestone row — actor intentionally OMITTED (empty) so the public timeline never names the
-        // confirming party (especially the claimant, who would otherwise be outed as the reclaimer).
-        // Accountability for accept/reject still lives on Claim.HandledByUserId.
         await _audit.LogAsync("", "HandoverConfirmed", "FoundItem", item.Id.ToString(),
             from.ToString(), ((FoundItemStatus)item.Status).ToString(), publicDetail, isPublic: true);
 
-        // Notify the OTHER party about this confirmation.
         var counterpart = holderActed ? accepted?.ClaimantUserId : holderId;
         if (!string.IsNullOrEmpty(counterpart))
             await _notify.PushAsync(counterpart, "Handover", "Cập nhật bàn giao",
@@ -378,7 +351,6 @@ public class ClaimService : IClaimService
         var status = (FoundItemStatus)item.Status;
         var isHolder = uid != null && IsHolderOrAdmin(item, user);
 
-        // CanClaim: logged-in member, not holder/reporter, item Open, no active claim.
         bool canClaim = false;
         if (uid != null && status == FoundItemStatus.Open && uid != item.ReporterUserId && !IsHolder(item, uid))
         {
@@ -387,15 +359,11 @@ public class ClaimService : IClaimService
                 (c.Status == (int)ClaimStatus.Pending || c.Status == (int)ClaimStatus.Accepted));
         }
 
-        // Who (if anyone) holds the accepted claim — needed for the handover buttons AND so the accepted
-        // claimant can see the "you received it" record on the returned item.
         var acceptedClaimantId = await _db.Claim.AsNoTracking()
             .Where(c => c.FoundItemId == foundItemId && c.Status == (int)ClaimStatus.Accepted)
             .Select(c => c.ClaimantUserId).FirstOrDefaultAsync();
         var isAcceptedClaimant = uid != null && uid == acceptedClaimantId;
 
-        // Private claim data only for holder/admin (blind listing). The accepted claimant additionally gets
-        // THEIR OWN accepted claim so the returned item can confirm "you received it" (own name — no leak).
         IReadOnlyList<ClaimForHolderViewModel> pending = Array.Empty<ClaimForHolderViewModel>();
         IReadOnlyList<ClaimForHolderViewModel> rejected = Array.Empty<ClaimForHolderViewModel>();
         ClaimForHolderViewModel? accepted = null;
@@ -410,7 +378,6 @@ public class ClaimService : IClaimService
             accepted = (await BuildHolderClaimsAsync(foundItemId, ClaimStatus.Accepted)).FirstOrDefault();
         }
 
-        // Built ONLY for the two parties, so the names inside never reach anyone else.
         var handover = await BuildHandoverAsync(item, acceptedClaimantId, isHolder, isAcceptedClaimant);
 
         return new ItemClaimPanelViewModel
@@ -427,11 +394,8 @@ public class ClaimService : IClaimService
         };
     }
 
-    /// <summary>Builds the shared two-way handover card — or null when it must not render: the item isn't
-    /// ClaimAccepted, there's no accepted claim, or the viewer is neither party (blind listing: the two
-    /// names must never reach a bystander).</summary>
     private async Task<HandoverPanelViewModel?> BuildHandoverAsync(
-        FoundItem item, string? acceptedClaimantId, bool viewerIsHolder, bool viewerIsClaimant)
+    FoundItem item, string? acceptedClaimantId, bool viewerIsHolder, bool viewerIsClaimant)
     {
         if ((FoundItemStatus)item.Status != FoundItemStatus.ClaimAccepted) return null;
         if (string.IsNullOrEmpty(acceptedClaimantId)) return null;
@@ -461,7 +425,13 @@ public class ClaimService : IClaimService
             .OrderBy(c => c.CreatedAt)
             .Select(c => new
             {
-                c.Id, c.ClaimantUserId, c.CreatedAt, c.VerificationDetails, c.ContactPhone, c.ContactEmail, c.RejectReason,
+                c.Id,
+                c.ClaimantUserId,
+                c.CreatedAt,
+                c.VerificationDetails,
+                c.ContactPhone,
+                c.ContactEmail,
+                c.RejectReason,
                 Images = c.ClaimImage.OrderBy(i => i.SortOrder).Select(i => i.Url).ToList()
             })
             .ToListAsync();
@@ -533,7 +503,6 @@ public class ClaimService : IClaimService
         var item = await _db.FoundItem.AsNoTracking().FirstOrDefaultAsync(f => f.Id == claim.FoundItemId);
         if (item is null) return null;
 
-        // Only the claimant, the item's holder, or an Admin. (General staff arbitration = FR-CLAIM-06, deferred.)
         var isHolder = IsHolderOrAdmin(item, user);
         var isClaimant = claim.ClaimantUserId == uid;
         if (!isHolder && !isClaimant) return null;
@@ -578,7 +547,7 @@ public class ClaimService : IClaimService
             CanPostMessage = live,
             CanAccept = isHolder && status == ClaimStatus.Pending && itemStatus == FoundItemStatus.Open,
             CanReject = isHolder && status == ClaimStatus.Pending,
-            // Only THIS claim's claimant counts as the handover counterparty, and only once accepted.
+
             Handover = await BuildHandoverAsync(
                 item,
                 status == ClaimStatus.Accepted ? claim.ClaimantUserId : null,
@@ -596,7 +565,7 @@ public class ClaimService : IClaimService
         if (claim is null) return false;
 
         var status = (ClaimStatus)claim.Status;
-        if (status == ClaimStatus.Rejected) return false; // closed claim -> thread is read-only
+        if (status == ClaimStatus.Rejected) return false;
 
         var item = await _db.FoundItem.AsNoTracking().FirstOrDefaultAsync(f => f.Id == claim.FoundItemId);
         if (item is null) return false;
@@ -606,7 +575,7 @@ public class ClaimService : IClaimService
         if (!isHolder && !isClaimant) return false;
 
         var holderId = (HoldingType)item.HoldingType == HoldingType.SelfHeld ? item.ReporterUserId : item.CustodianStaffId;
-        // The counterparty is the OTHER end of this thread.
+
         var recipient = isClaimant ? holderId : claim.ClaimantUserId;
 
         await using var tx = await _db.Database.BeginTransactionAsync();
@@ -616,11 +585,10 @@ public class ClaimService : IClaimService
             ClaimId = claimId,
             SenderUserId = uid,
             Body = body.Trim()
-            // CreatedAt is store-generated.
+
         });
         await _db.SaveChangesAsync();
 
-        // No AuditLog: a message is not a status change, and the thread itself is the record.
         if (!string.IsNullOrEmpty(recipient))
             await _notify.PushAsync(recipient, "ClaimMessage", "Tin nhắn mới về yêu cầu nhận lại",
                 $"Có tin nhắn mới về '{item.Title}'.", $"/Claims/Details/{claimId}");

@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace LostAndFound.Models.ViewModels.LostItems;
 
-/// <summary>Report-a-lost-item form. Public post; no PrivateMarks/HoldingType (the owner describes it).</summary>
 public class LostItemCreateViewModel
 {
     [Required(ErrorMessage = "Vui lòng nhập tiêu đề.")]

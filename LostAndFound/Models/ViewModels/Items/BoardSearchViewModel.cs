@@ -5,8 +5,6 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace LostAndFound.Models.ViewModels.Items;
 
-/// <summary>Unified board search state, bound from the query string.
-/// <see cref="Kind"/> null = both sides ("Tất cả").</summary>
 public class BoardSearchViewModel : IValidatableObject
 {
     public ItemKind? Kind { get; set; }
@@ -30,14 +28,13 @@ public class BoardSearchViewModel : IValidatableObject
     public IEnumerable<SelectListItem> Locations { get; set; } = new List<SelectListItem>();
     public PagedResult<BoardItemViewModel> Results { get; set; } = new();
 
-    /// <summary>How many filters are active — drives the mobile "Bộ lọc (N)" button.</summary>
     public int ActiveFilterCount =>
-        (Kind.HasValue ? 1 : 0) +
-        (string.IsNullOrWhiteSpace(Keyword) ? 0 : 1) +
-        (CategoryId.HasValue ? 1 : 0) +
-        (LocationId.HasValue ? 1 : 0) +
-        (string.IsNullOrWhiteSpace(Tag) ? 0 : 1) +
-        (From.HasValue ? 1 : 0) + (To.HasValue ? 1 : 0);
+    (Kind.HasValue ? 1 : 0) +
+    (string.IsNullOrWhiteSpace(Keyword) ? 0 : 1) +
+    (CategoryId.HasValue ? 1 : 0) +
+    (LocationId.HasValue ? 1 : 0) +
+    (string.IsNullOrWhiteSpace(Tag) ? 0 : 1) +
+    (From.HasValue ? 1 : 0) + (To.HasValue ? 1 : 0);
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

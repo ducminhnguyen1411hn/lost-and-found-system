@@ -3,17 +3,15 @@ using CloudinaryDotNet.Actions;
 
 namespace LostAndFound.Services.Images;
 
-/// <summary>Uploads found-item photos to Cloudinary and returns the secure URL (FR-FOUND-05).</summary>
 public class CloudinaryImageUploadService : IImageUploadService
 {
     private static readonly string[] AllowedTypes = { "image/jpeg", "image/png", "image/webp" };
-    private const long MaxBytes = 5 * 1024 * 1024; // 5 MB
+    private const long MaxBytes = 5 * 1024 * 1024;
 
     private readonly Cloudinary _cloudinary;
 
     public CloudinaryImageUploadService(Cloudinary cloudinary) => _cloudinary = cloudinary;
 
-    /// <inheritdoc />
     public async Task<string?> UploadAsync(IFormFile? file, string folder)
     {
         if (file is null || file.Length == 0) return null;
@@ -30,9 +28,6 @@ public class CloudinaryImageUploadService : IImageUploadService
             Folder = folder
         };
 
-        // Fail fast (not the SDK's default 100s) so FallbackImageUploadService can switch to local storage
-        // quickly when Cloudinary is unreachable. A blocked host usually errors instantly; this cap only
-        // bites when the TLS handshake hangs.
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         var result = await _cloudinary.UploadAsync(uploadParams, cts.Token);
         if (result.Error is not null)

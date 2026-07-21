@@ -3,8 +3,6 @@ using LostAndFound.Models.Enums;
 
 namespace LostAndFound.Models.ViewModels.Claims;
 
-/// <summary>The one page both parties use for a claim. Only ever built for the claimant, the item's
-/// holder, or an Admin — so carrying VerificationDetails/evidence/messages here is safe.</summary>
 public class ClaimDetailViewModel
 {
     public int ClaimId { get; init; }
@@ -25,15 +23,12 @@ public class ClaimDetailViewModel
     public IReadOnlyList<ClaimMessageViewModel> Messages { get; init; } = Array.Empty<ClaimMessageViewModel>();
 
     public bool ViewerIsHolder { get; init; }
-    /// <summary>Claim is still live (Pending/Accepted). A Rejected claim's thread is read-only.</summary>
     public bool CanPostMessage { get; init; }
     public bool CanAccept { get; init; }
     public bool CanReject { get; init; }
 
-    /// <summary>The two-way handover card, or null when it must not render. Same partial as the item page.</summary>
     public HandoverPanelViewModel? Handover { get; init; }
 
-    // bound on the post-message form
     [Required(ErrorMessage = "Nhập nội dung tin nhắn.")]
     [StringLength(2000)]
     [Display(Name = "Nhắn cho bên kia")]

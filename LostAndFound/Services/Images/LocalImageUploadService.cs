@@ -1,21 +1,14 @@
 namespace LostAndFound.Services.Images;
 
-/// <summary>
-/// Saves an image to <c>wwwroot/uploads/&lt;folder&gt;</c> and returns a site-relative URL
-/// (served by <c>UseStaticFiles</c>). This is the OFFLINE FALLBACK used when Cloudinary is
-/// unreachable (blocked network / no internet) — see <see cref="FallbackImageUploadService"/>.
-/// Validation (type + size) mirrors the Cloudinary service so behaviour is identical either way.
-/// </summary>
 public class LocalImageUploadService : IImageUploadService
 {
     private static readonly string[] AllowedTypes = { "image/jpeg", "image/png", "image/webp" };
-    private const long MaxBytes = 5 * 1024 * 1024; // 5 MB
+    private const long MaxBytes = 5 * 1024 * 1024;
 
     private readonly IWebHostEnvironment _env;
 
     public LocalImageUploadService(IWebHostEnvironment env) => _env = env;
 
-    /// <inheritdoc />
     public async Task<string?> UploadAsync(IFormFile? file, string folder)
     {
         if (file is null || file.Length == 0) return null;
@@ -40,7 +33,6 @@ public class LocalImageUploadService : IImageUploadService
         await using (var src = file.OpenReadStream())
             await src.CopyToAsync(dest);
 
-        // Forward slashes: this is a URL, not a filesystem path.
         return $"/uploads/{safeFolder}/{name}";
     }
 }

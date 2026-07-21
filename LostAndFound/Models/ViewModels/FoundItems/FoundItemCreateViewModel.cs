@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace LostAndFound.Models.ViewModels.FoundItems;
 
-/// <summary>Report-a-found-item form (FR-FOUND-01/02/05). Public fields + hidden PrivateMarks + tags.</summary>
 public class FoundItemCreateViewModel
 {
     [Required(ErrorMessage = "Vui lòng nhập tiêu đề.")]
@@ -48,13 +47,11 @@ public class FoundItemCreateViewModel
     [Display(Name = "Ảnh khác (có thể chọn nhiều)")]
     public List<IFormFile>? OtherImages { get; set; }
 
-    // Populated by the controller for the dropdowns.
     public IEnumerable<SelectListItem> Categories { get; set; } = new List<SelectListItem>();
     public IEnumerable<SelectListItem> Locations { get; set; } = new List<SelectListItem>();
 
-    /// <summary>Raw tag strings split from <see cref="TagsRaw"/> (normalization happens in TagService).</summary>
     public IEnumerable<string> TagList =>
-        string.IsNullOrWhiteSpace(TagsRaw)
-            ? Enumerable.Empty<string>()
-            : TagsRaw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    string.IsNullOrWhiteSpace(TagsRaw)
+        ? Enumerable.Empty<string>()
+        : TagsRaw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 }

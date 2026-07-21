@@ -8,7 +8,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LostAndFound.Services;
 
-/// <inheritdoc />
 public class CameraService : ICameraService
 {
     private readonly ApplicationDbContext _db;
@@ -31,7 +30,7 @@ public class CameraService : ICameraService
         {
             RequesterUserId = requesterUserId,
             LocationId = vm.LocationId!.Value,
-            FromTime = AppTime.ToUtc(vm.FromTime!.Value),   // form is local wall-clock -> store UTC
+            FromTime = AppTime.ToUtc(vm.FromTime!.Value),
             ToTime = AppTime.ToUtc(vm.ToTime!.Value),
             ItemDescription = vm.ItemDescription.Trim(),
             Status = (int)CameraRequestStatus.Pending
@@ -85,7 +84,7 @@ public class CameraService : ICameraService
             .Select(r => new Row
             {
                 Id = r.Id,
-                LocationName = r.Location.Name, 
+                LocationName = r.Location.Name,
                 FromTime = r.FromTime,
                 ToTime = r.ToTime,
                 ItemDescription = r.ItemDescription,
@@ -108,12 +107,12 @@ public class CameraService : ICameraService
 
     public async Task<bool> RespondAsync(int id, CameraRequestStatus outcome, string? note, string staffUserId)
     {
-        // One-step flow: the only valid outcomes are terminal.
+
         if (outcome != CameraRequestStatus.Resolved && outcome != CameraRequestStatus.Rejected) return false;
 
         var req = await _db.CameraCheckRequest.FirstOrDefaultAsync(r => r.Id == id);
         if (req is null) return false;
-        if (req.Status is (int)CameraRequestStatus.Resolved or (int)CameraRequestStatus.Rejected) return false; // already closed
+        if (req.Status is (int)CameraRequestStatus.Resolved or (int)CameraRequestStatus.Rejected) return false;
 
         await using var tx = await _db.Database.BeginTransactionAsync();
 
@@ -136,8 +135,6 @@ public class CameraService : ICameraService
         return true;
     }
 
-    // ---- helpers ----
-
     private async Task<List<SelectListItem>> BuildLocationsAsync()
     {
         var locs = await _db.Location.AsNoTracking().OrderBy(l => l.Building).ThenBy(l => l.Name).ToListAsync();
@@ -148,7 +145,6 @@ public class CameraService : ICameraService
         }).ToList();
     }
 
-    // CameraCheckRequest has no user navigation (FKs are bare strings) — batch-resolve names.
     private async Task<Dictionary<string, string?>> ResolveNamesAsync(List<Row> rows)
     {
         var ids = rows.SelectMany(r => new[] { r.RequesterUserId, r.HandledByStaffId })

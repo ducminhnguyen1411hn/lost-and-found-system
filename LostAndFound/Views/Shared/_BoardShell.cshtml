@@ -1,8 +1,6 @@
 @model BoardSearchViewModel
 @{
-    // Shared board layout: sidebar filters + result grid + pager + mobile offcanvas.
-    // Used by BOTH the public board (Items/Index) and "Bài đăng của tôi" (Items/Mine) — the two differ only
-    // in scope + wording, so they must not be two copies that drift apart.
+
     var boardAction = (string?)ViewData["BoardAction"] ?? "Index";
     var heading = (string?)ViewData["BoardHeading"] ?? "Bảng đồ";
     var emptyText = (string?)ViewData["BoardEmpty"] ?? "Không tìm thấy món nào khớp bộ lọc.";

@@ -13,8 +13,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LostAndFound.Controllers;
 
-/// <summary>The unified board + the merged create form. Detail/Edit/Delete stay on
-/// FoundItemsController / LostItemsController — those flows are genuinely different.</summary>
 public class ItemsController : Controller
 {
     private readonly IItemBoardService _board;
@@ -32,10 +30,6 @@ public class ItemsController : Controller
 
     private string Uid => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-    /// <summary>True when an admin has flagged the signed-in user IsPostingBlocked. The unified refactor
-    /// moved creation here from FoundItemsController but left this guard behind, so blocked users could
-    /// still post through the merged form — now gates the create actions AND hides the board's post button.
-    /// Anonymous-safe: the public board calls this too.</summary>
     private async Task<bool> IsPostingBlockedAsync()
     {
         if (User.Identity?.IsAuthenticated != true) return false;
@@ -53,8 +47,6 @@ public class ItemsController : Controller
         return View(q);
     }
 
-    /// <summary>The signed-in user's own posts, in every status. The owner id comes from the SIGNED-IN
-    /// user — never from the query string, or anyone could read another user's hidden (non-Open) posts.</summary>
     [Authorize]
     [HttpGet]
     public async Task<IActionResult> Mine(BoardSearchViewModel q)
@@ -144,9 +136,6 @@ public class ItemsController : Controller
         }
     }
 
-    /// <summary>Category (parent-grouped, "Parent › Child") + Location ("Building - Name") dropdowns —
-    /// mirrors FoundItemsController/LostItemsController's BuildCategorySelectAsync/BuildLocationSelectAsync
-    /// exactly, so the merged create page's dropdowns look identical to the pages it replaces.</summary>
     private async Task FillLookupsAsync(Action<IEnumerable<SelectListItem>> setCats, Action<IEnumerable<SelectListItem>> setLocs)
     {
         var cats = await _db.Category.AsNoTracking().ToListAsync();

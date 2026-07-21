@@ -21,7 +21,6 @@ public class AdminController : Controller
 
     #region Dashboard
 
-    // GET: /Admin
     public async Task<IActionResult> Index()
     {
         var model = await _adminService.GetDashboardAsync();
@@ -32,14 +31,12 @@ public class AdminController : Controller
 
     #region Category Management
 
-    // GET: /Admin/Categories
     public async Task<IActionResult> Categories()
     {
         var model = await _adminService.GetAllCategoriesAsync();
         return View(model);
     }
 
-    // GET: /Admin/Categories/Create
     public async Task<IActionResult> CreateCategory()
     {
         var model = await _adminService.GetCategoryCreateViewModelAsync();
@@ -47,7 +44,6 @@ public class AdminController : Controller
         return View(model);
     }
 
-    // POST: /Admin/Categories/Create
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateCategory(CategoryCreateViewModel model)
@@ -73,7 +69,6 @@ public class AdminController : Controller
         }
     }
 
-    // GET: /Admin/Categories/Edit/{id}
     public async Task<IActionResult> EditCategory(int id)
     {
         var model = await _adminService.GetCategoryEditViewModelAsync(id);
@@ -83,7 +78,6 @@ public class AdminController : Controller
         return View(model);
     }
 
-    // POST: /Admin/Categories/Edit
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EditCategory(CategoryEditViewModel model)
@@ -111,7 +105,6 @@ public class AdminController : Controller
         }
     }
 
-    // POST: /Admin/Categories/Delete/{id}
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteCategory(int id)
@@ -136,21 +129,18 @@ public class AdminController : Controller
 
     #region Location Management
 
-    // GET: /Admin/Locations
     public async Task<IActionResult> Locations()
     {
         var model = await _adminService.GetAllLocationsAsync();
         return View(model);
     }
 
-    // GET: /Admin/Locations/Create
     public async Task<IActionResult> CreateLocation()
     {
         var model = await _adminService.GetLocationCreateViewModelAsync();
         return View(model);
     }
 
-    // POST: /Admin/Locations/Create
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateLocation(LocationCreateViewModel model)
@@ -171,7 +161,6 @@ public class AdminController : Controller
         }
     }
 
-    // GET: /Admin/Locations/Edit/{id}
     public async Task<IActionResult> EditLocation(int id)
     {
         var model = await _adminService.GetLocationEditViewModelAsync(id);
@@ -180,7 +169,6 @@ public class AdminController : Controller
         return View(model);
     }
 
-    // POST: /Admin/Locations/Edit
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EditLocation(LocationEditViewModel model)
@@ -203,7 +191,6 @@ public class AdminController : Controller
         }
     }
 
-    // POST: /Admin/Locations/Delete/{id}
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteLocation(int id)
@@ -228,14 +215,12 @@ public class AdminController : Controller
 
     #region Tag Management
 
-    // GET: /Admin/Tags
     public async Task<IActionResult> Tags()
     {
         var model = await _adminService.GetAllTagsAsync();
         return View(model);
     }
 
-    // POST: /Admin/Tags/Merge
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> MergeTags(int sourceTagId, int targetTagId)
@@ -256,7 +241,6 @@ public class AdminController : Controller
         }
     }
 
-    // POST: /Admin/Tags/Cleanup
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CleanupUnusedTags()
@@ -284,7 +268,6 @@ public class AdminController : Controller
 
     #region Unclaimed Items
 
-    // GET: /Admin/Unclaimed
     public async Task<IActionResult> Unclaimed()
     {
         ViewBag.OverdueDays = _sweep.OverdueDays;
@@ -292,7 +275,6 @@ public class AdminController : Controller
         return View(model);
     }
 
-    // POST: /Admin/Unclaimed/Sweep — mark overdue Open items (no pending claim) as Unclaimed.
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SweepUnclaimed()
@@ -305,7 +287,6 @@ public class AdminController : Controller
         return RedirectToAction(nameof(Unclaimed));
     }
 
-    // POST: /Admin/Unclaimed/Dispose/{id}
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DisposeItem(int id)
@@ -330,14 +311,12 @@ public class AdminController : Controller
 
     #region Post Management
 
-    // GET: /Admin/Posts
     public async Task<IActionResult> Posts()
     {
         var model = await _adminService.GetAllPostsAsync();
         return View(model);
     }
 
-    // POST: /Admin/Posts/Delete
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeletePost(ItemKind kind, int id)
@@ -358,7 +337,6 @@ public class AdminController : Controller
 
     #region Audit Log
 
-    // GET: /Admin/AuditLog
     public async Task<IActionResult> AuditLog([FromQuery] AuditLogFilterViewModel filter)
     {
         ViewBag.Filter = filter;

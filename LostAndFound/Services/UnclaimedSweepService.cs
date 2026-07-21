@@ -5,11 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LostAndFound.Services;
 
-/// <inheritdoc />
 public class UnclaimedSweepService : IUnclaimedSweepService
 {
-    // Days an item may stay Open before it's considered unclaimed. Lower this (e.g. 0) to demo the sweep
-    // on fresh data, where every item's CreatedAt is "now".
+
     private const int Threshold = 30;
 
     private readonly ApplicationDbContext _db;
@@ -31,7 +29,6 @@ public class UnclaimedSweepService : IUnclaimedSweepService
         var openStatus = (int)FoundItemStatus.Open;
         var pendingClaim = (int)ClaimStatus.Pending;
 
-        // Only Open items past the cutoff that NO ONE is actively claiming (no pending claim).
         var candidates = await _db.FoundItem
             .Where(f => f.Status == openStatus
                      && f.CreatedAt < cutoff
@@ -48,7 +45,7 @@ public class UnclaimedSweepService : IUnclaimedSweepService
 
         foreach (var item in candidates)
         {
-            // Internal lifecycle event (pulled from circulation for disposal): keep it off the public timeline.
+
             await _auditService.LogAsync(actorUserId ?? string.Empty, "MarkedUnclaimed", "FoundItem",
                 item.Id.ToString(), FoundItemStatus.Open.ToString(), FoundItemStatus.Unclaimed.ToString(),
                 $"Quá {Threshold} ngày không có người nhận — đánh dấu chưa có người nhận.", isPublic: false);

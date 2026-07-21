@@ -1,4 +1,4 @@
-﻿using LostAndFound.Data;
+using LostAndFound.Data;
 using LostAndFound.Models.Entities;
 using LostAndFound.Models.Enums;
 using LostAndFound.Models.ViewModels.Admin;
@@ -35,7 +35,7 @@ public class AdminService : IAdminService
 
         foreach (var parent in parents)
         {
-            // Add parent category
+
             result.Add(new CategoryViewModel
             {
                 Id = parent.Id,
@@ -44,10 +44,9 @@ public class AdminService : IAdminService
                 ParentName = parent.Parent?.Name,
                 HasChildren = parent.InverseParent.Any(),
                 ItemCount = parent.FoundItem.Count,
-                Level = 0 // Root level
+                Level = 0
             });
 
-            // Add children categories (nested under parent)
             var children = categories.Where(c => c.ParentId == parent.Id).OrderBy(c => c.Name).ToList();
             foreach (var child in children)
             {
@@ -59,7 +58,7 @@ public class AdminService : IAdminService
                     ParentName = child.Parent?.Name,
                     HasChildren = child.InverseParent.Any(),
                     ItemCount = child.FoundItem.Count,
-                    Level = 1 // Child level
+                    Level = 1
                 });
             }
         }
@@ -68,7 +67,7 @@ public class AdminService : IAdminService
     }
 
     public Task<CategoryCreateViewModel> GetCategoryCreateViewModelAsync()
-        // Parent dropdown is supplied separately by the controller (ViewBag); nothing to load here.
+
         => Task.FromResult(new CategoryCreateViewModel());
 
     public async Task<CategoryEditViewModel?> GetCategoryEditViewModelAsync(int id)
@@ -92,7 +91,7 @@ public class AdminService : IAdminService
 
     public async Task<int> CreateCategoryAsync(CategoryCreateViewModel model, string actorUserId)
     {
-        // Validate ParentId exists if provided
+
         if (model.ParentId.HasValue)
         {
             var parentExists = await _db.Category.AnyAsync(c => c.Id == model.ParentId.Value);
@@ -123,11 +122,9 @@ public class AdminService : IAdminService
 
         if (category == null) return false;
 
-        // Prevent circular reference
         if (model.ParentId.HasValue && model.ParentId.Value == model.Id)
             throw new ArgumentException("Danh mục không thể là cha của chính nó");
 
-        // Prevent moving a parent under its own child
         if (model.ParentId.HasValue)
         {
             var isDescendant = IsDescendant(model.ParentId.Value, model.Id);
@@ -159,11 +156,9 @@ public class AdminService : IAdminService
 
         if (category == null) return false;
 
-        // Prevent deletion if has children
         if (category.InverseParent.Any())
             throw new ArgumentException("Không thể xoá danh mục còn danh mục con");
 
-        // Prevent deletion if has items
         if (category.FoundItem.Any())
             throw new ArgumentException("Không thể xoá danh mục đang có đồ gắn vào");
 
@@ -276,7 +271,6 @@ public class AdminService : IAdminService
 
         if (location == null) return false;
 
-        // Prevent deletion if has items
         if (location.FoundItem.Any())
             throw new ArgumentException("Không thể xoá địa điểm đang có đồ gắn vào");
 
@@ -324,14 +318,13 @@ public class AdminService : IAdminService
         if (sourceTag == null || targetTag == null)
             throw new ArgumentException("One or both tags not found");
 
-        // Migrate all FoundItemTag references
         var itemTags = await _db.FoundItemTag
             .Where(ft => ft.TagId == sourceTagId)
             .ToListAsync();
 
         foreach (var itemTag in itemTags)
         {
-            // Check if the item already has the target tag
+
             var existing = await _db.FoundItemTag
                 .FirstOrDefaultAsync(ft => ft.FoundItemId == itemTag.FoundItemId && ft.TagId == targetTagId);
 
@@ -341,7 +334,7 @@ public class AdminService : IAdminService
             }
             else
             {
-                // Duplicate, remove the source reference
+
                 _db.FoundItemTag.Remove(itemTag);
             }
         }
@@ -469,7 +462,6 @@ public class AdminService : IAdminService
             })
             .ToListAsync();
 
-        // LostItem has no user navigation (the FK is a bare string) — batch-resolve owner names.
         var ownerIds = lostRaw.Select(l => l.OwnerUserId).Distinct().ToList();
         var ownerNames = await _db.Users
             .Where(u => ownerIds.Contains(u.Id))
@@ -504,8 +496,6 @@ public class AdminService : IAdminService
                 .FirstOrDefaultAsync();
             if (meta is null) return false;
 
-            // FoundItem is blocked by a NO-ACTION parent (Claim); delete it first.
-            // Deleting Claim cascades ClaimImage + ClaimMessage; deleting FoundItem cascades its images + tags.
             await _db.Claim.Where(c => c.FoundItemId == id).ExecuteDeleteAsync();
             await _db.FoundItem.Where(f => f.Id == id).ExecuteDeleteAsync();
 
@@ -522,7 +512,6 @@ public class AdminService : IAdminService
                 .FirstOrDefaultAsync();
             if (meta is null) return false;
 
-            // LostItem has no NO-ACTION children — deleting it cascades its images + tags at the DB level.
             await _db.LostItem.Where(l => l.Id == id).ExecuteDeleteAsync();
 
             await _auditService.LogAsync(actorUserId, "Deleted", "LostItem", id.ToString(),
@@ -568,7 +557,6 @@ public class AdminService : IAdminService
 
         var returnRate = totalItems > 0 ? (double)returnedItems / totalItems * 100 : 0;
 
-        // Calculate average return time
         var returnedItemsWithData = await _db.FoundItem
             .Include(f => f.Claim)
             .Where(f => f.Status == returnedStatus)
@@ -588,7 +576,6 @@ public class AdminService : IAdminService
             avgReturnDays = totalDays / returnedItemsWithData.Count;
         }
 
-        // Longest unclaimed item
         var unclaimedStatus = (int)FoundItemStatus.Unclaimed;
         var longestUnclaimed = await _db.FoundItem
             .Where(f => f.Status == unclaimedStatus)
@@ -599,7 +586,6 @@ public class AdminService : IAdminService
             ? (int)(DateTime.UtcNow - longestUnclaimed.CreatedAt).TotalDays
             : 0;
 
-        // Top finders
         var topFinders = await _db.FoundItem
             .GroupBy(f => f.ReporterUserId)
             .Select(g => new TopFinderViewModel
@@ -611,14 +597,12 @@ public class AdminService : IAdminService
             .Take(5)
             .ToListAsync();
 
-        // Fill in user names
         foreach (var finder in topFinders)
         {
             var user = await _db.Users.FindAsync(finder.UserId);
             finder.FullName = user?.FullName ?? user?.Email ?? "Unknown";
         }
 
-        // Recent activities
         var recentActivities = await _db.AuditLog
             .Include(a => a.ActorUser)
             .OrderByDescending(a => a.CreatedAt)
