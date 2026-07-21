@@ -1,213 +1,110 @@
 # LostAndFound
 
-A school **lost-and-found** web application — not a simple storage log, but a **matching exchange
-with a verified-return workflow**: finders post items, searchers subscribe to watch-alerts, the
-system auto-notifies on a match, and handovers are confirmed by both parties with a full audit trail.
-
-> **Status: foundation only.** Feature logic is implemented per the `FR-*` items in the specs.
-> For domain rules and conventions, read **[CLAUDE.md](CLAUDE.md)** and **[docs/INDEX.md](docs/INDEX.md)**
-> before non-trivial work. This file covers **how to build and run the app**.
+Website tìm đồ thất lạc cho trường học: người nhặt được đăng món đồ, người mất đi tìm, gửi yêu cầu
+nhận lại và hai bên xác nhận bàn giao. Viết bằng **ASP.NET Core MVC (.NET 8)** + **SQL Server**.
 
 ---
 
-## Tech stack
+## Yêu cầu máy
 
-| Area | Choice |
-|---|---|
-| Runtime | **.NET 8** (`net8.0`, C# 12) |
-| Web | ASP.NET Core MVC — Razor + TagHelpers + Partial Views, Bootstrap 5 |
-| Data | **EF Core 8, DB-First** · SQL Server **LocalDB** |
-| Auth | ASP.NET Core Identity (roles: `Guest` / `Member` / `Staff` / `Admin`) |
-| Realtime | SignalR |
-| Audit | `AuditLog` table (+ optional Serilog) |
-
-> Package versions are pinned to the **8.0.x** line. Do not upgrade across major versions.
+- **.NET 8 SDK** — kiểm tra: `dotnet --list-sdks` (cần có dòng `8.x`).
+- **SQL Server** bất kỳ: LocalDB, SQL Server Express, hoặc một SQL Server bạn đã có sẵn.
+- **Một tool quản lý SQL Server**: SSMS, Azure Data Studio, hoặc DBeaver.
 
 ---
 
-## Prerequisites
+## Chạy project — 3 bước
 
-| Requirement | Notes |
-|---|---|
-| **.NET 8 SDK** | The app targets `net8.0`. A .NET 10 SDK can build it as long as the .NET 8 runtime/reference pack is present; if the build reports a missing `net8.0` targeting pack, install the .NET 8 SDK. |
-| **SQL Server LocalDB** (`MSSQLLocalDB`) | Ships with Visual Studio or the standalone "SQL Server Express LocalDB" installer. |
-| **`sqlcmd`** | Used to build the database from `schema.sql`. Part of the SQL Server command-line utilities. |
+### Bước 1 — Trỏ chuỗi kết nối tới SQL Server của bạn
 
-Verify your environment:
-
-```powershell
-dotnet --list-runtimes | Select-String "AspNetCore.App 8"   # expect 8.0.x
-sqllocaldb info                                              # expect MSSQLLocalDB
-```
-
----
-
-## Quick start
-
-Run from the repository root.
-
-```powershell
-# 1. Start LocalDB (if not already running)
-sqllocaldb start MSSQLLocalDB
-
-# 2. Create the database and tables from the authoritative schema
-sqlcmd -S "(localdb)\MSSQLLocalDB" -b -i LostAndFound/db/schema.sql
-
-# 3. Build
-dotnet build LostAndFound/LostAndFound.csproj
-
-# 4. Run
-dotnet run --project LostAndFound/LostAndFound.csproj
-```
-
-Then open **http://localhost:5082**.
-
-On startup the app seeds the four roles and a starter admin account (idempotent — safe to re-run).
-
----
-
-## Access
-
-| Item | Value |
-|---|---|
-| App (HTTP) | http://localhost:5082 |
-| App (HTTPS) | https://localhost:7257 |
-| Sign in | `/Identity/Account/Login` · Register: `/Identity/Account/Register` |
-| **Seeded admin** | `admin@lostandfound.local` / `Admin#12345` |
-
-> The seeded admin password is for local development only — change it before any real deployment.
-
-To run over HTTPS (trust the dev certificate once):
-
-```powershell
-dotnet dev-certs https --trust
-dotnet run --project LostAndFound/LostAndFound.csproj --launch-profile https
-```
-
----
-
-## Day-to-day development
-
-The database persists between runs, so after the first setup you only need:
-
-```powershell
-dotnet run --project LostAndFound/LostAndFound.csproj
-```
-
-Stop the app with `Ctrl + C`. For automatic rebuilds on file changes:
-
-```powershell
-dotnet watch --project LostAndFound/LostAndFound.csproj
-```
-
----
-
-## Database (DB-First)
-
-The database is the **source of truth**, not the C# entity classes. When the schema changes:
-
-1. Edit [LostAndFound/db/schema.sql](LostAndFound/db/schema.sql).
-2. Recreate the database: `sqlcmd -S "(localdb)\MSSQLLocalDB" -b -i LostAndFound/db/schema.sql`.
-3. Regenerate the entities with the **`/db-rescaffold`** skill — do not hand-edit `Models/Entities/`.
-4. **Do not** run EF migrations (`migrations add` / `database update`); those are Code-First tools.
-
-See the "DB-First" section of [CLAUDE.md](CLAUDE.md) for the full workflow.
-
----
-
-## Configuration
-
-The connection string lives in [LostAndFound/appsettings.json](LostAndFound/appsettings.json) under
-`ConnectionStrings:DefaultConnection`. The default points at LocalDB:
-
-```
-Server=(localdb)\MSSQLLocalDB;Database=LostAndFound;Trusted_Connection=True;TrustServerCertificate=True
-```
-
-Application URLs and launch profiles are defined in
-[LostAndFound/Properties/launchSettings.json](LostAndFound/Properties/launchSettings.json).
-
-### Secrets — Cloudinary & local overrides
-
-`appsettings.json` is **committed to git**, so it holds only non-secret defaults: the `Cloudinary`
-values there are intentionally left **empty**. **Never paste real API keys into `appsettings.json`** —
-once committed they stay in git history forever, even if you delete them in a later commit.
-
-Image upload (found/lost item photos) needs a **Cloudinary** account. Put your real keys in **one** of
-the places below — both are kept out of git and override `appsettings.json` at runtime:
-
-**Option A — `appsettings.Development.json`** (git-ignored; the simplest "just works" local file):
+Mở **`LostAndFound/appsettings.json`**, sửa `ConnectionStrings:DefaultConnection` cho trỏ đúng SQL Server
+của bạn (giữ nguyên `Database=LostAndFound`):
 
 ```json
-{
-  "Cloudinary": {
-    "CloudName": "<your-cloud-name>",
-    "ApiKey": "<your-api-key>",
-    "ApiSecret": "<your-api-secret>"
-  }
+"ConnectionStrings": {
+  "DefaultConnection": "Server=<MÁY_CHỦ_CỦA_BẠN>;Database=LostAndFound;Trusted_Connection=True;TrustServerCertificate=True"
 }
 ```
 
-**Option B — user-secrets** (per-developer, stored outside the repo):
+Vài ví dụ cho `Server=`:
 
-```powershell
-dotnet user-secrets set "Cloudinary:CloudName" "<your-cloud-name>" --project LostAndFound/LostAndFound.csproj
-dotnet user-secrets set "Cloudinary:ApiKey"    "<your-api-key>"    --project LostAndFound/LostAndFound.csproj
-dotnet user-secrets set "Cloudinary:ApiSecret" "<your-api-secret>" --project LostAndFound/LostAndFound.csproj
-```
-
-You can override `ConnectionStrings:DefaultConnection` the same way (e.g. to point at a real SQL Server
-instance instead of LocalDB).
-
-> `appsettings.Development.json` is listed in `.gitignore`. If `git status` still shows it as tracked,
-> untrack it once (the file stays on disk): `git rm --cached LostAndFound/appsettings.Development.json`.
-> Without Cloudinary configured the app still runs — only image upload fails.
-
----
-
-## Troubleshooting
-
-| Symptom | Cause / fix |
+| Loại SQL Server | Chuỗi mẫu |
 |---|---|
-| `Cannot open database "LostAndFound"` or a network-related connection error | The schema step hasn't run, or LocalDB is stopped. Run `sqllocaldb start MSSQLLocalDB`, then re-run the `sqlcmd ... schema.sql` step. |
-| Build reports a missing `net8.0` targeting pack | Only a newer SDK is installed without the .NET 8 reference pack. Install the **.NET 8 SDK**. |
-| `Address already in use` (port 5082 / 7257) | Another instance holds the port. Close it, or change the port in `launchSettings.json`. |
-| HTTPS certificate warning at sign-in | Run `dotnet dev-certs https --trust` once. |
-| `sqllocaldb` / `sqlcmd` not found | Install "SQL Server Express LocalDB" and the "SQL Server command-line utilities". |
+| LocalDB | `Server=(localdb)\MSSQLLocalDB;Database=LostAndFound;Trusted_Connection=True;TrustServerCertificate=True` |
+| SQL Server trên máy (Windows auth) | `Server=localhost;Database=LostAndFound;Trusted_Connection=True;TrustServerCertificate=True` |
+| SQL Server + tài khoản SQL (user/pass) | `Server=localhost,1433;Database=LostAndFound;User Id=sa;Password=MẬT_KHẨU;TrustServerCertificate=True` |
 
----
+> Không cần tạo sẵn database — bước 2 sẽ tự tạo. Chỉ cần `Server=` trỏ đúng, phần `Database=LostAndFound`
+> để nguyên.
 
-## Project structure
+### Bước 2 — Chạy `schema.sql` + `seed-data.sql` bằng tool DB
 
-```
-LostAndFound/
-  Controllers/        thin — orchestration only
-  Models/
-    ApplicationUser.cs (hand-written)
-    Enums/             locked domain enums
-    Entities/          generated (DB-First scaffold)
-    ViewModels/        what views receive (never entities)
-  Data/
-    ApplicationDbContext.cs   single runtime context
-    SeedData.cs               roles + starter admin
-    Scaffolded/               scaffold target
-  Services/            Interfaces/ (contracts) + implementations
-  Hubs/  TagHelpers/    SignalR + UI helpers
-  db/schema.sql         authoritative database schema
-docs/                   INDEX.md + specs + feature records
+Mở tool quản lý SQL (**SSMS / Azure Data Studio / DBeaver**), kết nối tới server ở bước 1, rồi mở và
+**Execute** lần lượt 2 file:
+
+1. `LostAndFound/db/schema.sql` — tự tạo database `LostAndFound` + toàn bộ bảng (chạy lại nhiều lần vô hại).
+2. `LostAndFound/db/seed-data.sql` — nạp dữ liệu mẫu (tài khoản demo, món đồ…). Chạy **sau** `schema.sql`.
+
+### Bước 3 — Build và chạy
+
+```bash
+dotnet run --project LostAndFound/LostAndFound.csproj
 ```
 
----
+Mở trình duyệt: **http://localhost:5082** (hoặc `https://localhost:7257`).
 
-## Documentation
-
-- **[docs/INDEX.md](docs/INDEX.md)** — master index: domain model, state machines, roles, roadmap.
-- **[CLAUDE.md](CLAUDE.md)** — architecture rules, invariants, and conventions.
-- **[docs/BASE_SETUP.md](docs/BASE_SETUP.md)** — how the foundation was built.
+Lần chạy đầu, app tự tạo **4 vai trò** và các **tài khoản mẫu** + một ít **dữ liệu demo**. Chạy lại nhiều
+lần vô hại (đã có thì thôi).
 
 ---
 
-## Git workflow
+## Tài khoản đăng nhập sẵn
 
-`feature/<name>` → PR into `dev` → `main` holds only runnable builds. Keep commit messages concise
-and reference the relevant `FR-*` id; link the Feature Record in the PR description.
+| Vai trò | Email | Mật khẩu |
+|---|---|---|
+| Admin | `admin@lostandfound.local` | `Admin#12345` |
+| Nhân viên | `staff@lostandfound.local` | `Staff#12345` |
+| Thành viên | `member@lostandfound.local` | `Member#12345` |
+
+> Nếu có chạy `seed-data.sql`, còn có thêm các tài khoản demo `user01@lostandfound.local` … với mật khẩu `Demo#12345`.
+> Đổi mật khẩu admin trước khi dùng thật.
+
+Bạn cũng có thể tự đăng ký tài khoản mới ở `/Identity/Account/Register` (mặc định là vai trò Thành viên).
+
+---
+
+## Upload ảnh (không bắt buộc)
+
+App upload ảnh món đồ lên **Cloudinary**. Nếu **không** cấu hình Cloudinary, app vẫn chạy bình thường và
+**tự lưu ảnh vào `LostAndFound/wwwroot/uploads/`** trên máy chủ — chỉ khác chỗ lưu, không lỗi gì.
+
+Muốn dùng Cloudinary thật, thêm khoá vào **`appsettings.json`** (mục `Cloudinary`) hoặc tạo file
+`LostAndFound/appsettings.Development.json` (không bị commit):
+
+```json
+"Cloudinary": {
+  "CloudName": "<cloud-name-của-bạn>",
+  "ApiKey": "<api-key>",
+  "ApiSecret": "<api-secret>"
+}
+```
+
+---
+
+## Ghi chú kỹ thuật
+
+- **DB-First**: `LostAndFound/db/schema.sql` là nguồn chân lý của cơ sở dữ liệu. Đổi cấu trúc bảng thì sửa
+  ở đó rồi chạy lại. Không dùng EF migrations.
+- URL & cổng chạy nằm ở `LostAndFound/Properties/launchSettings.json`.
+- Chạy HTTPS lần đầu cần tin cậy chứng chỉ dev một lần: `dotnet dev-certs https --trust`.
+
+---
+
+## Xử lý sự cố nhanh
+
+| Triệu chứng | Cách xử lý |
+|---|---|
+| `Cannot open database "LostAndFound"` | Chưa chạy `schema.sql`, hoặc `Server=` trỏ sai. Chạy lại bước 2. |
+| `A network-related... error / login failed` | Sai server/tài khoản trong chuỗi kết nối. Kiểm tra lại `Server=`, `User Id`, `Password`. |
+| Build báo thiếu targeting pack `net8.0` | Máy chỉ có SDK mới hơn. Cài thêm **.NET 8 SDK**. |
+| `Address already in use` (cổng 5082/7257) | Đang có tiến trình chiếm cổng. Đóng nó, hoặc đổi cổng trong `launchSettings.json`. |
