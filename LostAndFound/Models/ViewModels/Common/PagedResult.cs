@@ -1,6 +1,5 @@
 namespace LostAndFound.Models.ViewModels.Common;
 
-/// <summary>A single page of results plus the paging metadata a pager view needs.</summary>
 public class PagedResult<T>
 {
     public IReadOnlyList<T> Items { get; init; } = Array.Empty<T>();

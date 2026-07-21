@@ -1,9 +1,4 @@
-@*
-    Reusable tag input (FR-TAG). Convention: the owning ViewModel exposes a string property named
-    `TagsRaw`; this partial binds to it by name. Comma-separated; a small script renders a live chip
-    preview but the text field stays the source of truth (works fine without JS). Autocomplete = FR-TAG-04.
-    Usage: <partial name="_TagInput" model="@Model.TagsRaw" />
-*@
+
 @model string
 
 <style>
@@ -78,7 +73,6 @@
                     var lastComma = textBefore.lastIndexOf(',');
                     var textAfter = input.value.substring(cursorPos);
 
-                    // Replace the current tag with the selected suggestion
                     var newValue = input.value.substring(0, lastComma + 1) + ' ' + s + ', ' + textAfter;
                     input.value = newValue.trim();
                     dropdown.style.display = 'none';

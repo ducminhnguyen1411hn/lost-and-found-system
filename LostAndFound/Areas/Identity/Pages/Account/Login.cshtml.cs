@@ -1,4 +1,4 @@
-﻿using LostAndFound.Models;
+using LostAndFound.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -74,7 +74,7 @@ namespace LostAndFound.Areas.Identity.Pages.Account
 
             if (ModelState.IsValid)
             {
-                // Chặn tài khoản đã bị block trước khi đăng nhập  
+
                 var existingUser = await _userManager.FindByEmailAsync(Input.Email);
                 if (existingUser != null && existingUser.IsBlocked)
                 {
@@ -86,7 +86,7 @@ namespace LostAndFound.Areas.Identity.Pages.Account
                 if (result.Succeeded)
                 {
                     _logger.LogInformation("User logged in.");
-                    // Admin -> dashboard admin; còn lại giữ returnUrl  
+
                     if (existingUser != null && await _userManager.IsInRoleAsync(existingUser, "Admin"))
                         return RedirectToAction("Index", "Admin");
                     return LocalRedirect(returnUrl);
@@ -132,14 +132,13 @@ namespace LostAndFound.Areas.Identity.Pages.Account
             if (result.Succeeded)
             {
                 _logger.LogInformation("User logged in via external provider.");
-                
-                // Check if user is Admin and redirect to Admin dashboard
+
                 var user = await _userManager.FindByEmailAsync(email);
                 if (user != null && await _userManager.IsInRoleAsync(user, "Admin"))
                 {
                     return LocalRedirect("/Admin");
                 }
-                
+
                 return LocalRedirect(returnUrl);
             }
 

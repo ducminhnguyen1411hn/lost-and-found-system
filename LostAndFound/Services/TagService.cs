@@ -8,10 +8,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LostAndFound.Services;
 
-/// <summary>
-/// The single source of tag normalization (FR-TAG-01). Display uses the raw tag; ALL matching /
-/// subscription compares on <see cref="Normalize"/>d form. See <see cref="ITagService"/>.
-/// </summary>
 public class TagService : ITagService
 {
     private static readonly Regex MultiSpace = new(@"\s+", RegexOptions.Compiled);
@@ -19,15 +15,12 @@ public class TagService : ITagService
 
     public TagService(ApplicationDbContext db) => _db = db;
 
-    /// <inheritdoc />
     public string Normalize(string raw)
     {
         if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
 
-        // 1) trim + lower, 2) map đ/Đ (they do NOT decompose under NFD),
         var lowered = raw.Trim().ToLowerInvariant().Replace('đ', 'd').Replace('Đ', 'd');
 
-        // 3) strip VN diacritics via NFD then drop the combining marks,
         var decomposed = lowered.Normalize(NormalizationForm.FormD);
         var sb = new StringBuilder(decomposed.Length);
         foreach (var ch in decomposed)
@@ -37,14 +30,12 @@ public class TagService : ITagService
         }
         var stripped = sb.ToString().Normalize(NormalizationForm.FormC);
 
-        // 4) collapse internal whitespace.
         return MultiSpace.Replace(stripped, " ").Trim();
     }
 
-    /// <inheritdoc />
     public async Task<IEnumerable<Tag>> ResolveTagsAsync(IEnumerable<string> rawTags)
     {
-        // normalized key -> first display form seen
+
         var map = new Dictionary<string, string>();
         foreach (var raw in rawTags ?? Enumerable.Empty<string>())
         {
@@ -63,7 +54,7 @@ public class TagService : ITagService
         foreach (var (norm, display) in map)
         {
             if (existingKeys.Contains(norm)) continue;
-            // Added but NOT saved here — the caller's transaction owns the SaveChanges (FR-LOG-02).
+
             var tag = new Tag { DisplayTag = display, NormalizedTag = norm };
             _db.Tag.Add(tag);
             result.Add(tag);
@@ -71,7 +62,6 @@ public class TagService : ITagService
         return result;
     }
 
-    /// <inheritdoc />
     public async Task<IEnumerable<string>> SuggestTagsAsync(string partial)
     {
         if (string.IsNullOrWhiteSpace(partial)) return Array.Empty<string>();
@@ -79,7 +69,6 @@ public class TagService : ITagService
         var norm = Normalize(partial);
         if (norm.Length == 0) return Array.Empty<string>();
 
-        // Search tags where NormalizedTag contains the normalized partial, return DisplayTag for UI
         return await _db.Tag.AsNoTracking()
             .Where(t => t.NormalizedTag.Contains(norm))
             .OrderBy(t => t.DisplayTag)

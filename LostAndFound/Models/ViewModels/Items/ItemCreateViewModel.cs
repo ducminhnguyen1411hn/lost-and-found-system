@@ -5,9 +5,6 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace LostAndFound.Models.ViewModels.Items;
 
-/// <summary>The ONE create form. <see cref="Kind"/> picks which service handles the POST and which
-/// fields show. HoldingType/PrivateMarks exist only on the found side (a lost post has no holder and
-/// no secret marks to verify against).</summary>
 public class ItemCreateViewModel
 {
     [Display(Name = "Bạn muốn đăng gì?")]
@@ -46,7 +43,6 @@ public class ItemCreateViewModel
     [Display(Name = "Ảnh khác (có thể chọn nhiều)")]
     public List<IFormFile>? OtherImages { get; set; }
 
-    // ---- found-side only ----
     [Display(Name = "Cách giữ")]
     public HoldingType HoldingType { get; set; } = HoldingType.SelfHeld;
 

@@ -2,7 +2,6 @@ using LostAndFound.Models.Enums;
 
 namespace LostAndFound.Models.ViewModels.LostItems;
 
-/// <summary>Public lost-item detail.</summary>
 public class LostItemDetailViewModel
 {
     public int Id { get; init; }
@@ -16,7 +15,6 @@ public class LostItemDetailViewModel
     public LostItemStatus Status { get; init; }
     public IReadOnlyList<string> DisplayTags { get; init; } = Array.Empty<string>();
 
-    /// <summary>True only for the owner while the post is still Open — drives Sửa/Xoá/Đã tìm thấy.</summary>
     public bool CanEdit { get; init; }
 
     public IReadOnlyList<PublicEvent> PublicEvents { get; init; } = Array.Empty<PublicEvent>();

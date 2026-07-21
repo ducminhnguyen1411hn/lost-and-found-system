@@ -5,8 +5,6 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace LostAndFound.Models.ViewModels.FoundItems;
 
-/// <summary>Edit-a-found-item form. Owner-only; HoldingType is shown read-only (changing it would
-/// alter the state machine/holder). Uploading a new image replaces the old one; leaving it empty keeps it.</summary>
 public class FoundItemEditViewModel
 {
     public int Id { get; set; }
@@ -45,16 +43,13 @@ public class FoundItemEditViewModel
     [Display(Name = "Thêm ảnh mới (có thể chọn nhiều)")]
     public List<IFormFile>? NewImages { get; set; }
 
-    /// <summary>Ids of existing images the user ticked to remove.</summary>
     public List<int> RemoveImageIds { get; set; } = new();
 
-    /// <summary>Existing-image Id the user picked as the cover (gets SortOrder 0). Defaults to the current cover.</summary>
     public int? CoverImageId { get; set; }
 
-    /// <summary>Existing images shown for management (cover first).</summary>
     public IReadOnlyList<ImageItem> ExistingImages { get; set; } = Array.Empty<ImageItem>();
 
-    public HoldingType HoldingType { get; set; } // read-only display
+    public HoldingType HoldingType { get; set; }
 
     public class ImageItem
     {

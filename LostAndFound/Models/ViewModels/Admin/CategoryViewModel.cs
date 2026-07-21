@@ -18,5 +18,5 @@ public class CategoryViewModel
 
     public int ItemCount { get; set; }
 
-    public int Level { get; set; } // 0 = root, 1 = child, etc.
+    public int Level { get; set; }
 }

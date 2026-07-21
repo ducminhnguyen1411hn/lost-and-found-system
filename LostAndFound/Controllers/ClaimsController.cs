@@ -36,7 +36,7 @@ public class ClaimsController : Controller
     {
         if (!ModelState.IsValid)
         {
-            // Re-hydrate read-only context for redisplay.
+
             var reload = await _claims.GetCreateFormAsync(vm.FoundItemId, User);
             vm.ItemTitle = reload?.ItemTitle ?? vm.ItemTitle;
             vm.ItemCoverImage = reload?.ItemCoverImage;
@@ -50,9 +50,7 @@ public class ClaimsController : Controller
         }
         catch (Exception ex) when (ex is InvalidOperationException or ImageUploadException)
         {
-            // InvalidOperationException = a business-rule violation; ImageUploadException = a bad evidence
-            // file (wrong type / too large / Cloudinary error). Both surface as a friendly ModelState error
-            // rather than a 500 (upload runs before the transaction, so nothing is half-written).
+
             ModelState.AddModelError(string.Empty, ex.Message);
             var reload = await _claims.GetCreateFormAsync(vm.FoundItemId, User);
             vm.ItemTitle = reload?.ItemTitle ?? vm.ItemTitle;
@@ -76,10 +74,6 @@ public class ClaimsController : Controller
         return View(vm);
     }
 
-    /// <summary>Lightweight polling endpoint for the claim chat (stand-in until SignalR). Returns only the
-    /// messages newer than <paramref name="afterId"/>, and reuses <see cref="IClaimService.GetClaimDetailAsync"/>
-    /// so the SAME authorization applies — only the claimant, the holder, or an Admin ever gets rows back
-    /// (anyone else gets 404). Nothing beyond message fields is exposed (no verification/contact).</summary>
     [HttpGet]
     [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     public async Task<IActionResult> Messages(int id, int afterId = 0)

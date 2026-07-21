@@ -8,7 +8,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LostAndFound.Services;
 
-/// <inheritdoc />
 public class CameraService : ICameraService
 {
     private readonly ApplicationDbContext _db;
@@ -31,7 +30,7 @@ public class CameraService : ICameraService
         {
             RequesterUserId = requesterUserId,
             LocationId = vm.LocationId!.Value,
-            FromTime = AppTime.ToUtc(vm.FromTime!.Value),   // form is local wall-clock -> store UTC
+            FromTime = AppTime.ToUtc(vm.FromTime!.Value),
             ToTime = AppTime.ToUtc(vm.ToTime!.Value),
             ItemDescription = vm.ItemDescription.Trim(),
             Status = (int)CameraRequestStatus.Pending
@@ -42,8 +41,8 @@ public class CameraService : ICameraService
         await _db.SaveChangesAsync();
 
         await _notificationService.PushToStaffAsync("CameraRequest",
-            "Yêu cầu trích camera mới",
-            "Có người xin trích camera — vào mục Yêu cầu camera để xử lý.",
+            "Yêu cầu show camera mới",
+            "Có người xin show camera — vào mục Yêu cầu camera để xử lý.",
             "/Camera");
         await tx.CommitAsync();
         return req.Id;
@@ -108,12 +107,12 @@ public class CameraService : ICameraService
 
     public async Task<bool> RespondAsync(int id, CameraRequestStatus outcome, string? note, string staffUserId)
     {
-        // One-step flow: the only valid outcomes are terminal.
+
         if (outcome != CameraRequestStatus.Resolved && outcome != CameraRequestStatus.Rejected) return false;
 
         var req = await _db.CameraCheckRequest.FirstOrDefaultAsync(r => r.Id == id);
         if (req is null) return false;
-        if (req.Status is (int)CameraRequestStatus.Resolved or (int)CameraRequestStatus.Rejected) return false; // already closed
+        if (req.Status is (int)CameraRequestStatus.Resolved or (int)CameraRequestStatus.Rejected) return false;
 
         await using var tx = await _db.Database.BeginTransactionAsync();
 
@@ -125,18 +124,16 @@ public class CameraService : ICameraService
         await _db.SaveChangesAsync();
 
         await _auditService.LogAsync(staffUserId, "CameraResponded", "CameraCheckRequest", id.ToString(),
-            from.ToString(), outcome.ToString(), $"Phản hồi yêu cầu trích camera: {StatusText((int)outcome)}", isPublic: false);
+            from.ToString(), outcome.ToString(), $"Phản hồi yêu cầu show camera: {StatusText((int)outcome)}", isPublic: false);
 
         await _notificationService.PushAsync(req.RequesterUserId, "CameraResponded",
             outcome == CameraRequestStatus.Resolved ? "Yêu cầu camera đã được xử lý" : "Yêu cầu camera bị từ chối",
-            string.IsNullOrWhiteSpace(note) ? "Nhân viên đã phản hồi yêu cầu trích camera của bạn." : $"Phản hồi: {note.Trim()}",
+            string.IsNullOrWhiteSpace(note) ? "Nhân viên đã phản hồi yêu cầu show camera của bạn." : $"Phản hồi: {note.Trim()}",
             "/Camera/Mine");
 
         await tx.CommitAsync();
         return true;
     }
-
-    // ---- helpers ----
 
     private async Task<List<SelectListItem>> BuildLocationsAsync()
     {
@@ -148,7 +145,6 @@ public class CameraService : ICameraService
         }).ToList();
     }
 
-    // CameraCheckRequest has no user navigation (FKs are bare strings) — batch-resolve names.
     private async Task<Dictionary<string, string?>> ResolveNamesAsync(List<Row> rows)
     {
         var ids = rows.SelectMany(r => new[] { r.RequesterUserId, r.HandledByStaffId })

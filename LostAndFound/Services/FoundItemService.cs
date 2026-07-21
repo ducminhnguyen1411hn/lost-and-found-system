@@ -9,11 +9,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LostAndFound.Services;
 
-/// <summary>See <see cref="IFoundItemService"/>. Thin-controller partner: all FR-FOUND rules live here.</summary>
 public class FoundItemService : IFoundItemService
 {
     private const string ImageFolder = "lostandfound/founditems";
-    private const int MaxImages = 7; // max photos per post
+    private const int MaxImages = 7;
 
     private readonly ApplicationDbContext _db;
     private readonly ITagService _tags;
@@ -28,25 +27,19 @@ public class FoundItemService : IFoundItemService
         _images = images;
     }
 
-    /// <inheritdoc />
     public async Task<int> CreateAsync(FoundItemCreateViewModel vm, string reporterUserId)
     {
-        // Backstop: an admin may have flagged this user IsPostingBlocked. Controllers pre-check this,
-        // but enforce it here too so no create path (present or future) can slip past the block.
+
         var poster = await _db.Users.FindAsync(reporterUserId);
         if (poster is not null && poster.IsPostingBlocked)
             throw new InvalidOperationException("Bạn đã bị chặn đăng bài. Vui lòng liên hệ quản trị viên.");
 
-        // Enforce the per-post image cap BEFORE uploading (don't waste Cloudinary calls).
         var intendedCount = (vm.CoverImage != null ? 1 : 0) + (vm.OtherImages?.Count ?? 0);
         if (intendedCount > MaxImages)
             throw new ImageUploadException($"Tối đa {MaxImages} ảnh mỗi bài.");
 
-        // Upload BEFORE opening the DB transaction (network I/O must not hold a tx open).
-        // Cover first (SortOrder 0), then the "other" images.
         var imageUrls = await UploadOrderedAsync(vm.CoverImage, vm.OtherImages);
 
-        // SelfHeld goes public immediately; Custodial waits for staff intake (FR-HOLD-02).
         var status = vm.HoldingType == HoldingType.Custodial ? FoundItemStatus.PendingDropoff : FoundItemStatus.Open;
 
         await using var tx = await _db.Database.BeginTransactionAsync();
@@ -57,15 +50,15 @@ public class FoundItemService : IFoundItemService
             Description = string.IsNullOrWhiteSpace(vm.Description) ? null : vm.Description.Trim(),
             CategoryId = vm.CategoryId!.Value,
             LocationId = vm.LocationId!.Value,
-            FoundAt = AppTime.ToUtc(vm.FoundAt!.Value), // form is local wall-clock -> store UTC
+            FoundAt = AppTime.ToUtc(vm.FoundAt!.Value),
             Status = (int)status,
             HoldingType = (int)vm.HoldingType,
             PrivateMarks = string.IsNullOrWhiteSpace(vm.PrivateMarks) ? null : vm.PrivateMarks.Trim(),
             ReporterUserId = reporterUserId
-            // CreatedAt is store-generated.
+
         };
         _db.FoundItem.Add(item);
-        await _db.SaveChangesAsync(); // get item.Id
+        await _db.SaveChangesAsync();
 
         for (int i = 0; i < imageUrls.Count; i++)
             _db.FoundItemImage.Add(new FoundItemImage { FoundItemId = item.Id, Url = imageUrls[i], SortOrder = i });
@@ -74,7 +67,7 @@ public class FoundItemService : IFoundItemService
         var tags = await _tags.ResolveTagsAsync(vm.TagList);
         foreach (var tag in tags)
         {
-            // Use the navigation so tags created in this same transaction (Id still 0) get linked correctly.
+
             _db.FoundItemTag.Add(new FoundItemTag { FoundItemId = item.Id, Tag = tag });
         }
         if (tags.Any()) await _db.SaveChangesAsync();
@@ -86,14 +79,13 @@ public class FoundItemService : IFoundItemService
             entityId: item.Id.ToString(),
             fromStatus: null,
             toStatus: status.ToString(),
-            detail: $"Đăng đồ nhặt được: {item.Title}", // title is public; never PrivateMarks
+            detail: $"Đăng đồ nhặt được: {item.Title}",
             isPublic: status == FoundItemStatus.Open);
 
         await tx.CommitAsync();
         return item.Id;
     }
 
-    /// <inheritdoc />
     public async Task<FoundItemDetailViewModel?> GetDetailAsync(int id, ClaimsPrincipal user)
     {
         var item = await _db.FoundItem.AsNoTracking()
@@ -110,29 +102,16 @@ public class FoundItemService : IFoundItemService
         var isCustodian = uid != null && item.CustodianStaffId != null && uid == item.CustodianStaffId;
         var isStaffish = user.IsInRole("Staff") || user.IsInRole("Admin");
 
-        // These are TWO different questions and must not share one flag:
-        //  (1) may this viewer read the hidden fields (PrivateMarks / StorageLocation)?
-        //  (2) may this viewer open the page at all?
-        // The accepted claimant answers YES to (2) and NO to (1) — PrivateMarks is the secret they were
-        // verified against, so handing it to them would gut the whole two-sided check.
         var canSeePrivate = isReporter || isCustodian || isStaffish;
 
-        // A party to the item: needed during ClaimAccepted (the handover panel) and after Returned —
-        // ConfirmReceived redirects straight here, so without this the claimant 404s the instant they
-        // confirm receipt of their own item.
-        var isAcceptedClaimant = uid != null && await _db.Claim.AsNoTracking()
-            .AnyAsync(c => c.FoundItemId == id && c.ClaimantUserId == uid && c.Status == (int)ClaimStatus.Accepted);
+        var isClaimant = uid != null && await _db.Claim.AsNoTracking()
+            .AnyAsync(c => c.FoundItemId == id && c.ClaimantUserId == uid);
 
         var status = (FoundItemStatus)item.Status;
-        // Publicly viewable: Open (it's browsable) and Returned — FR-TL-03 finalises the timeline there and
-        // FR-THANK-02 puts the thank-you on this very page, and a success story nobody can open is pointless.
-        // Returned is still absent from the BOARD (that lists Open only); this is about the detail page.
-        // Everything else (PendingDropoff / ClaimAccepted / Unclaimed / Disposed) stays with the parties + staff.
-        // PrivateMarks is gated separately by canSeePrivate, so opening the page never exposes the secret.
-        var isPubliclyViewable = status == FoundItemStatus.Open || status == FoundItemStatus.Returned;
-        if (!isPubliclyViewable && !canSeePrivate && !isAcceptedClaimant) return null;
 
-        // Owner may edit/delete only while the item is still editable (no claim yet).
+        var isPubliclyViewable = status == FoundItemStatus.Open || status == FoundItemStatus.Returned;
+        if (!isPubliclyViewable && !canSeePrivate && !isClaimant) return null;
+
         var hasClaim = await _db.Claim.AsNoTracking().AnyAsync(c => c.FoundItemId == id);
         var canEdit = isReporter
             && (status == FoundItemStatus.Open || status == FoundItemStatus.PendingDropoff)
@@ -143,7 +122,6 @@ public class FoundItemService : IFoundItemService
             .Select(u => u.FullName ?? u.Email)
             .FirstOrDefaultAsync() ?? "N/A";
 
-        // Left-join Users for the actor's display name (ActorUserId is a plain FK, no navigation).
         var events = await (
             from a in _db.AuditLog.AsNoTracking()
             join usr in _db.Users.AsNoTracking() on a.ActorUserId equals usr.Id into au
@@ -180,7 +158,6 @@ public class FoundItemService : IFoundItemService
         };
     }
 
-    /// <inheritdoc />
     public async Task<FoundItemEditViewModel?> GetForEditAsync(int id, string userId)
     {
         var item = await _db.FoundItem.AsNoTracking()
@@ -188,7 +165,7 @@ public class FoundItemService : IFoundItemService
             .Include(f => f.FoundItemImage)
             .FirstOrDefaultAsync(f => f.Id == id);
 
-        if (item is null || item.ReporterUserId != userId) return null; // owner-only
+        if (item is null || item.ReporterUserId != userId) return null;
         if (!await IsEditableAsync(item)) return null;
 
         return new FoundItemEditViewModel
@@ -198,7 +175,7 @@ public class FoundItemService : IFoundItemService
             Description = item.Description,
             CategoryId = item.CategoryId,
             LocationId = item.LocationId,
-            FoundAt = AppTime.ToLocal(item.FoundAt), // stored UTC -> local for the datetime-local input
+            FoundAt = AppTime.ToLocal(item.FoundAt),
             PrivateMarks = item.PrivateMarks,
             TagsRaw = string.Join(", ", item.FoundItemTag.Select(ft => ft.Tag.DisplayTag)),
             ExistingImages = item.FoundItemImage
@@ -210,23 +187,20 @@ public class FoundItemService : IFoundItemService
         };
     }
 
-    /// <inheritdoc />
     public async Task<bool> UpdateAsync(int id, FoundItemEditViewModel vm, string userId)
     {
         var item = await _db.FoundItem
             .Include(f => f.FoundItemTag)
             .Include(f => f.FoundItemImage)
             .FirstOrDefaultAsync(f => f.Id == id);
-        if (item is null || item.ReporterUserId != userId) return false; // owner-only
+        if (item is null || item.ReporterUserId != userId) return false;
         if (!await IsEditableAsync(item)) return false;
 
-        // Enforce the per-post image cap (kept + newly added) BEFORE uploading.
         var removeIds = vm.RemoveImageIds ?? new List<int>();
         var keptCount = item.FoundItemImage.Count(im => !removeIds.Contains(im.Id));
         if (keptCount + (vm.NewImages?.Count ?? 0) > MaxImages)
             throw new ImageUploadException($"Tối đa {MaxImages} ảnh mỗi bài.");
 
-        // Upload any newly added images before the transaction.
         var newUrls = new List<string>();
         if (vm.NewImages is not null)
             foreach (var f in vm.NewImages)
@@ -241,14 +215,13 @@ public class FoundItemService : IFoundItemService
         item.Description = string.IsNullOrWhiteSpace(vm.Description) ? null : vm.Description.Trim();
         item.CategoryId = vm.CategoryId!.Value;
         item.LocationId = vm.LocationId!.Value;
-        item.FoundAt = AppTime.ToUtc(vm.FoundAt!.Value); // form is local wall-clock -> store UTC
+        item.FoundAt = AppTime.ToUtc(vm.FoundAt!.Value);
         item.PrivateMarks = string.IsNullOrWhiteSpace(vm.PrivateMarks) ? null : vm.PrivateMarks.Trim();
 
-        // Images: drop the ticked ones, keep the rest, append the new ones, renumber SortOrder (cover = 0).
         var toRemove = item.FoundItemImage.Where(im => removeIds.Contains(im.Id)).ToList();
         if (toRemove.Count > 0) _db.FoundItemImage.RemoveRange(toRemove);
         var kept = item.FoundItemImage.Where(im => !removeIds.Contains(im.Id)).OrderBy(im => im.SortOrder).ToList();
-        // Float the explicitly-chosen cover (if it survived removal) to SortOrder 0.
+
         if (vm.CoverImageId is int coverId)
         {
             var cover = kept.FirstOrDefault(im => im.Id == coverId);
@@ -259,7 +232,6 @@ public class FoundItemService : IFoundItemService
         foreach (var url in newUrls)
             _db.FoundItemImage.Add(new FoundItemImage { FoundItemId = item.Id, Url = url, SortOrder = order++ });
 
-        // Replace the tag set: delete old joins first (avoid a unique-key clash), then add the resolved tags.
         _db.FoundItemTag.RemoveRange(item.FoundItemTag);
         await _db.SaveChangesAsync();
 
@@ -268,7 +240,6 @@ public class FoundItemService : IFoundItemService
             _db.FoundItemTag.Add(new FoundItemTag { FoundItemId = item.Id, Tag = tag });
         await _db.SaveChangesAsync();
 
-        // Public so the edit shows in the item's timeline. Detail is a generic label — never field values.
         await _audit.LogAsync(userId, "Updated", "FoundItem", item.Id.ToString(),
             null, null, "Cập nhật bài đăng", isPublic: true);
 
@@ -276,15 +247,14 @@ public class FoundItemService : IFoundItemService
         return true;
     }
 
-    /// <inheritdoc />
     public async Task<bool> DeleteAsync(int id, string userId)
     {
         var item = await _db.FoundItem.FirstOrDefaultAsync(f => f.Id == id);
-        if (item is null || item.ReporterUserId != userId) return false; // owner-only
+        if (item is null || item.ReporterUserId != userId) return false;
         if (!await IsEditableAsync(item)) return false;
 
         await using var tx = await _db.Database.BeginTransactionAsync();
-        _db.FoundItem.Remove(item); // FoundItemTag rows cascade
+        _db.FoundItem.Remove(item);
         await _db.SaveChangesAsync();
 
         await _audit.LogAsync(userId, "Deleted", "FoundItem", id.ToString(),
@@ -294,7 +264,6 @@ public class FoundItemService : IFoundItemService
         return true;
     }
 
-    /// <summary>Uploads the cover (first) then the other images, returning URLs in cover-first order.</summary>
     private async Task<List<string>> UploadOrderedAsync(IFormFile? cover, List<IFormFile>? others)
     {
         var urls = new List<string>();
@@ -309,7 +278,6 @@ public class FoundItemService : IFoundItemService
         return urls;
     }
 
-    /// <summary>Editable only while Open/PendingDropoff AND no claim exists yet.</summary>
     private async Task<bool> IsEditableAsync(FoundItem item)
     {
         var status = (FoundItemStatus)item.Status;

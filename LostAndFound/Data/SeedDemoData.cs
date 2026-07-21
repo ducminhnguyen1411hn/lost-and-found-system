@@ -7,19 +7,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LostAndFound.Data;
 
-/// <summary>
-/// Demo dataset for local testing / presentation: ~100 found-item posts across the Vietnamese
-/// categories, spread over the last two months, with generated members, tags, multiple images
-/// (real photos via picsum.photos), and matching AuditLog rows. All times are UTC (project convention).
-/// Deterministic (fixed RNG seed) and idempotent — it only runs when there are no items yet.
-/// </summary>
 public static class SeedDemoData
 {
     private const int PostCount = 100;
     private const int UserCount = 20;
     private const string DemoPassword = "Demo#12345";
 
-    // (Title, Description, leaf-category name, tags). Category names must match the tree in SeedData.
     private static readonly (string Title, string Desc, string Cat, string[] Tags)[] Archetypes =
     {
         ("Ví da nam", "Ví da nam, bên trong còn vài loại thẻ.", "Ví/Bóp", new[] { "ví", "ví da" }),
@@ -52,11 +45,10 @@ public static class SeedDemoData
 
     public static async Task SeedAsync(ApplicationDbContext db, UserManager<ApplicationUser> userManager, ITagService tagService)
     {
-        if (await db.FoundItem.AnyAsync()) return; // already seeded
+        if (await db.FoundItem.AnyAsync()) return;
 
-        var rng = new Random(20260714); // deterministic
+        var rng = new Random(20260714);
 
-        // 1) Demo members (reporters).
         var surnames = new[] { "Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Huỳnh", "Phan", "Vũ", "Đặng", "Bùi", "Đỗ", "Ngô", "Dương", "Lý" };
         var middles = new[] { "Văn", "Thị", "Hữu", "Đức", "Minh", "Ngọc", "Gia", "Quang", "Thanh", "Hoài" };
         var givens = new[] { "An", "Bình", "Chi", "Dũng", "Giang", "Hà", "Hải", "Hoa", "Hùng", "Khánh", "Lan", "Linh", "Mai", "Nam", "Ngọc", "Phúc", "Quân", "Quỳnh", "Sơn", "Thảo", "Trang", "Tuấn", "Vy", "Yến" };
@@ -83,15 +75,13 @@ public static class SeedDemoData
                 reporterIds.Add(user.Id);
             }
         }
-        if (reporterIds.Count == 0) return; // nothing to attach posts to
+        if (reporterIds.Count == 0) return;
 
-        // 2) Reference data.
         var cats = await db.Category.AsNoTracking().ToListAsync();
-        var leafCats = cats.Where(c => !cats.Any(x => x.ParentId == c.Id)).ToList(); // childless = selectable leaf
+        var leafCats = cats.Where(c => !cats.Any(x => x.ParentId == c.Id)).ToList();
         var catIdByName = leafCats.ToDictionary(c => c.Name, c => c.Id);
         var locationIds = await db.Location.AsNoTracking().Select(l => l.Id).ToListAsync();
 
-        // 3) Resolve every tag once (creates the Tag rows), then map normalized -> id.
         await tagService.ResolveTagsAsync(Archetypes.SelectMany(a => a.Tags).Distinct());
         await db.SaveChangesAsync();
         var tagIdByNorm = await db.Tag.AsNoTracking().ToDictionaryAsync(t => t.NormalizedTag, t => t.Id);
@@ -99,14 +89,13 @@ public static class SeedDemoData
         var colors = new[] { "đen", "trắng", "xanh", "đỏ", "xám", "be", "nâu", "hồng" };
         var now = DateTime.UtcNow;
 
-        // 4) Create the posts.
         var created = new List<(FoundItem Item, string[] Tags, int Images)>();
         for (int i = 0; i < PostCount; i++)
         {
             var a = Archetypes[rng.Next(Archetypes.Length)];
             var catId = catIdByName.TryGetValue(a.Cat, out var cid) ? cid : leafCats[rng.Next(leafCats.Count)].Id;
             var foundAtUtc = now.AddDays(-rng.Next(0, 60)).AddHours(-rng.Next(0, 24)).AddMinutes(-rng.Next(0, 60));
-            var custodial = rng.Next(100) < 15; // ~15% custodial (kept out of the public list)
+            var custodial = rng.Next(100) < 15;
             var status = custodial ? FoundItemStatus.PendingDropoff : FoundItemStatus.Open;
 
             var item = new FoundItem
@@ -123,11 +112,10 @@ public static class SeedDemoData
                 CreatedAt = foundAtUtc.AddMinutes(rng.Next(5, 180))
             };
             db.FoundItem.Add(item);
-            created.Add((item, a.Tags, rng.Next(1, 5))); // 1-4 images
+            created.Add((item, a.Tags, rng.Next(1, 5)));
         }
-        await db.SaveChangesAsync(); // assign item Ids
+        await db.SaveChangesAsync();
 
-        // 5) Images + tag links + audit rows.
         foreach (var (item, tags, images) in created)
         {
             for (int j = 0; j < images; j++)
@@ -156,7 +144,7 @@ public static class SeedDemoData
                 CreatedAt = item.CreatedAt
             });
 
-            if (rng.Next(100) < 25) // ~1/4 also have an edit event
+            if (rng.Next(100) < 25)
                 db.AuditLog.Add(new AuditLog
                 {
                     ActorUserId = item.ReporterUserId,
@@ -171,8 +159,6 @@ public static class SeedDemoData
         await db.SaveChangesAsync();
     }
 
-    /// <summary>Demo dataset for the LOST-item board: ~24 public "I lost this" posts by the demo members.
-    /// Runs once, when there are no lost items yet. Reuses the same archetypes/tags.</summary>
     public static async Task SeedLostItemsAsync(ApplicationDbContext db, UserManager<ApplicationUser> userManager, ITagService tagService)
     {
         if (await db.LostItem.AnyAsync()) return;
@@ -212,7 +198,7 @@ public static class SeedDemoData
                 CreatedAt = lostAt.AddMinutes(rng.Next(5, 180))
             };
             db.LostItem.Add(item);
-            created.Add((item, a.Tags, rng.Next(0, 3))); // 0-2 images (losers often have none)
+            created.Add((item, a.Tags, rng.Next(0, 3)));
         }
         await db.SaveChangesAsync();
 

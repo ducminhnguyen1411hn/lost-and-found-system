@@ -1,25 +1,6 @@
-/* =====================================================================
-   LostAndFound — Database schema (DB-First, source of truth)
-   ---------------------------------------------------------------------
-   This script is the AUTHORITATIVE data model. The EF Core entities in
-   Models/Entities are GENERATED from this DB via `dotnet ef dbcontext
-   scaffold` (see Data/Scaffolded/README.md). Edit the schema HERE first,
-   then re-run the DB + scaffold. Do not design tables in C#.
+-- LostAndFound - schema database
+-- chay: sqlcmd -S "(localdb)\MSSQLLocalDB" -i db\schema.sql
 
-   Target: SQL Server LocalDB  (localdb)\MSSQLLocalDB
-   Run   : sqlcmd -S "(localdb)\MSSQLLocalDB" -i db\schema.sql
-
-   Conventions (decided in docs/BASE_SETUP.md):
-   - User FK columns are nvarchar(450) to match AspNetUsers.Id.
-   - Every FK is ON DELETE NO ACTION (avoids SQL Server "multiple cascade
-     paths" errors AND preserves history). Only the tag-join -> parent
-     legs use CASCADE.
-   - Enums stored as int. CHECK constraints guard their ranges.
-   - All date/time columns are datetime2; created-at default SYSUTCDATETIME().
-   ===================================================================== */
-
--- Filtered indexes (used below on AspNetUsers/AspNetRoles) require these parse-time
--- SET options ON. sqlcmd leaves QUOTED_IDENTIFIER OFF by default, so assert it here.
 SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER ON;
 GO
@@ -31,16 +12,11 @@ GO
 USE [LostAndFound];
 GO
 
--- Re-assert for this session/DB context before any filtered-index creation.
 SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER ON;
 GO
 
-/* =====================================================================
-   1. ASP.NET Core Identity tables (standard EF Core 8 schema, string keys)
-      AspNetUsers carries the project's custom columns.
-   ===================================================================== */
-
+-- cac bang cua Identity (user / role)
 IF OBJECT_ID(N'dbo.AspNetRoles', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.AspNetRoles (
@@ -71,11 +47,9 @@ BEGIN
         LockoutEnd           datetimeoffset(7) NULL,
         LockoutEnabled       bit               NOT NULL CONSTRAINT DF_AspNetUsers_LockoutEnabled DEFAULT (0),
         AccessFailedCount    int               NOT NULL CONSTRAINT DF_AspNetUsers_AccessFailed DEFAULT (0),
-        -- Project-specific profile column (nullable so the default Identity register UI still
-        -- works; the FR-AUTH feature makes FullName required at the app layer). This is a generic
-        -- *school* lost-and-found for ANY level — user profile = FullName + Email + PhoneNumber only.
+
         FullName             nvarchar(200)     NULL,
-        -- User management columns for admin control
+
         IsBlocked            bit               NOT NULL CONSTRAINT DF_AspNetUsers_IsBlocked DEFAULT (0),
         IsPostingBlocked     bit               NOT NULL CONSTRAINT DF_AspNetUsers_IsPostingBlocked DEFAULT (0)
     );
@@ -84,7 +58,6 @@ BEGIN
 END
 GO
 
--- Reconcile older DBs: drop the legacy university-only profile columns if present (idempotent, no-op on fresh DB).
 IF OBJECT_ID(N'dbo.AspNetUsers', N'U') IS NOT NULL
 BEGIN
     DROP INDEX IF EXISTS UX_AspNetUsers_StudentOrStaffCode ON dbo.AspNetUsers;
@@ -93,7 +66,6 @@ BEGIN
 END
 GO
 
--- Reconcile older DBs: add the admin user-management columns if missing (idempotent, no-op on fresh DB).
 IF OBJECT_ID(N'dbo.AspNetUsers', N'U') IS NOT NULL
 BEGIN
     IF COL_LENGTH(N'dbo.AspNetUsers', N'IsBlocked') IS NULL
@@ -171,22 +143,13 @@ BEGIN
 END
 GO
 
-/* =====================================================================
-   Reconcile older DBs: drop dead-feature tables (idempotent, no-op on a fresh DB).
-   - LostAlert / LostAlertTag: the FR-MATCH "watch subscription" (dropped feature) — always empty.
-   - ThankYou: the FR-THANK rating feature (dropped) — always empty.
-   Child table is dropped before its parent to satisfy the FK.
-   ===================================================================== */
+-- bo may bang khong dung nua
 DROP TABLE IF EXISTS dbo.LostAlertTag;
 DROP TABLE IF EXISTS dbo.LostAlert;
 DROP TABLE IF EXISTS dbo.ThankYou;
 GO
 
-/* =====================================================================
-   2. Lookup / reference tables
-   ===================================================================== */
-
--- Category: 2-level, system-defined (self-referencing ParentId).
+-- danh muc, dia diem, the
 IF OBJECT_ID(N'dbo.Category', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.Category (
@@ -199,7 +162,6 @@ BEGIN
 END
 GO
 
--- Location: a place inside the school / site.
 IF OBJECT_ID(N'dbo.Location', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.Location (
@@ -210,7 +172,6 @@ BEGIN
 END
 GO
 
--- Tag: keyword label. NormalizedTag is the unique dedupe/match key.
 IF OBJECT_ID(N'dbo.Tag', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.Tag (
@@ -222,11 +183,7 @@ BEGIN
 END
 GO
 
-/* =====================================================================
-   3. Core domain tables
-   ===================================================================== */
-
--- FoundItem: the reported found item + public listing. Status/HoldingType are int enums.
+-- do nhat duoc
 IF OBJECT_ID(N'dbo.FoundItem', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.FoundItem (
@@ -236,18 +193,16 @@ BEGIN
         CategoryId                int            NOT NULL,
         LocationId                int            NOT NULL,
         FoundAt                   datetime2      NOT NULL,
-        Status                    int            NOT NULL CONSTRAINT DF_FoundItem_Status DEFAULT (1), -- 1 = Open
-        HoldingType               int            NOT NULL CONSTRAINT DF_FoundItem_HoldingType DEFAULT (0), -- 0 = SelfHeld
+        Status                    int            NOT NULL CONSTRAINT DF_FoundItem_Status DEFAULT (1),
+        HoldingType               int            NOT NULL CONSTRAINT DF_FoundItem_HoldingType DEFAULT (0),
         StorageLocation           nvarchar(200)  NULL,
-        PrivateMarks              nvarchar(1000) NULL,  -- HIDDEN: never shown on public views
-        -- NOTE: images live in the child table dbo.FoundItemImage (1-to-many). The legacy single
-        -- ImagePath column was removed; existing values are migrated below.
+        PrivateMarks              nvarchar(1000) NULL,
+
         ReporterUserId            nvarchar(450)  NOT NULL,
         CustodianStaffId          nvarchar(450)  NULL,
         HolderConfirmedHandover   bit            NOT NULL CONSTRAINT DF_FoundItem_HolderConfirmed DEFAULT (0),
         ClaimantConfirmedHandover bit            NOT NULL CONSTRAINT DF_FoundItem_ClaimantConfirmed DEFAULT (0),
-        -- When each side confirmed (UTC, set by the service). NULL until they do; reset to NULL whenever
-        -- the handover restarts (a claim is accepted, or the holder cancels the acceptance).
+
         HolderConfirmedAt         datetime2      NULL,
         ClaimantConfirmedAt       datetime2      NULL,
         CreatedAt                 datetime2      NOT NULL CONSTRAINT DF_FoundItem_CreatedAt DEFAULT (SYSUTCDATETIME()),
@@ -266,7 +221,6 @@ BEGIN
 END
 GO
 
--- FoundItemTag: M-N join (surrogate Id so it scaffolds as an explicit entity).
 IF OBJECT_ID(N'dbo.FoundItemTag', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.FoundItemTag (
@@ -281,8 +235,6 @@ BEGIN
 END
 GO
 
--- FoundItemImage: 1-to-many photos of a FoundItem. The COVER image is the row with the lowest
--- SortOrder (0); the rest are the "other" images. Cascade-deletes with its FoundItem.
 IF OBJECT_ID(N'dbo.FoundItemImage', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.FoundItemImage (
@@ -296,10 +248,6 @@ BEGIN
 END
 GO
 
--- Reconcile older DBs: migrate the legacy single FoundItem.ImagePath into FoundItemImage (as the
--- cover, SortOrder 0) and drop the column. Idempotent: runs only while the column still exists.
--- Wrapped in dynamic SQL: on a FRESH DB the column doesn't exist, and column names aren't covered by
--- deferred name resolution, so a static reference would fail the whole batch with "Invalid column name".
 IF COL_LENGTH(N'dbo.FoundItem', N'ImagePath') IS NOT NULL
 BEGIN
     EXEC sys.sp_executesql N'
@@ -309,8 +257,7 @@ BEGIN
 END
 GO
 
--- LostItem: a public "I lost this" post (the active counterpart to a found item). Status is an int enum
--- (0=Open, 1=Resolved, 2=Cancelled). Owner = the person who lost the item.
+-- do bi mat
 IF OBJECT_ID(N'dbo.LostItem', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.LostItem (
@@ -318,9 +265,9 @@ BEGIN
         Title       nvarchar(200)  NOT NULL,
         Description nvarchar(2000) NULL,
         CategoryId  int            NOT NULL,
-        LocationId  int            NOT NULL,   -- area where it was likely lost
+        LocationId  int            NOT NULL,
         LostAt      datetime2      NOT NULL,
-        Status      int            NOT NULL CONSTRAINT DF_LostItem_Status DEFAULT (0), -- 0 = Open
+        Status      int            NOT NULL CONSTRAINT DF_LostItem_Status DEFAULT (0),
         OwnerUserId nvarchar(450)  NOT NULL,
         CreatedAt   datetime2      NOT NULL CONSTRAINT DF_LostItem_CreatedAt DEFAULT (SYSUTCDATETIME()),
         CONSTRAINT CK_LostItem_Status CHECK (Status BETWEEN 0 AND 2),
@@ -335,7 +282,6 @@ BEGIN
 END
 GO
 
--- LostItemImage: 1-to-many photos of a LostItem (cover = lowest SortOrder). Cascade-deletes with its post.
 IF OBJECT_ID(N'dbo.LostItemImage', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.LostItemImage (
@@ -349,7 +295,6 @@ BEGIN
 END
 GO
 
--- LostItemTag: M-N join between LostItem and Tag.
 IF OBJECT_ID(N'dbo.LostItemTag', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.LostItemTag (
@@ -364,7 +309,7 @@ BEGIN
 END
 GO
 
--- Claim: a request to reclaim a FoundItem. Status is an int enum.
+-- yeu cau nhan lai + tin nhan
 IF OBJECT_ID(N'dbo.Claim', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.Claim (
@@ -373,12 +318,10 @@ BEGIN
         ClaimantUserId      nvarchar(450)  NOT NULL,
         VerificationDetails nvarchar(2000) NOT NULL,
         EvidenceImagePath   nvarchar(400)  NULL,
-        -- Optional contact the claimant chooses to share, per claim. Prefilled from their profile but
-        -- overridable (a friend's number, the dorm desk...). Visible ONLY to the item's holder + Admin —
-        -- same gate as VerificationDetails. Never public.
+
         ContactPhone        nvarchar(30)   NULL,
         ContactEmail        nvarchar(256)  NULL,
-        Status              int            NOT NULL CONSTRAINT DF_Claim_Status DEFAULT (0), -- 0 = Pending
+        Status              int            NOT NULL CONSTRAINT DF_Claim_Status DEFAULT (0),
         HandledByUserId     nvarchar(450)  NULL,
         RejectReason        nvarchar(1000) NULL,
         CreatedAt           datetime2      NOT NULL CONSTRAINT DF_Claim_CreatedAt DEFAULT (SYSUTCDATETIME()),
@@ -394,9 +337,6 @@ BEGIN
 END
 GO
 
--- Reconcile older DBs: when each side confirmed the two-way handover. Nullable + reset to NULL whenever
--- the handover restarts (accept / cancel-acceptance). Stored UTC like every other time column here —
--- these have no DB default because the service sets them, so it MUST use DateTime.UtcNow.
 IF COL_LENGTH(N'dbo.FoundItem', N'HolderConfirmedAt') IS NULL
     ALTER TABLE dbo.FoundItem ADD HolderConfirmedAt datetime2 NULL;
 GO
@@ -404,8 +344,6 @@ IF COL_LENGTH(N'dbo.FoundItem', N'ClaimantConfirmedAt') IS NULL
     ALTER TABLE dbo.FoundItem ADD ClaimantConfirmedAt datetime2 NULL;
 GO
 
--- Reconcile older DBs: the two optional contact columns above were added after Claim already existed,
--- so the CREATE TABLE block never runs for them. Idempotent + additive (nullable, no backfill needed).
 IF COL_LENGTH(N'dbo.Claim', N'ContactPhone') IS NULL
     ALTER TABLE dbo.Claim ADD ContactPhone nvarchar(30) NULL;
 GO
@@ -413,7 +351,6 @@ IF COL_LENGTH(N'dbo.Claim', N'ContactEmail') IS NULL
     ALTER TABLE dbo.Claim ADD ContactEmail nvarchar(256) NULL;
 GO
 
--- ClaimImage: 1-to-many evidence photos of a Claim (SortOrder ascending). Cascade-deletes with its claim.
 IF OBJECT_ID(N'dbo.ClaimImage', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.ClaimImage (
@@ -427,9 +364,6 @@ BEGIN
 END
 GO
 
--- Reconcile older DBs: migrate the legacy single Claim.EvidenceImagePath into ClaimImage (SortOrder 0)
--- and drop the column. Idempotent: runs only while the column still exists. Dynamic SQL because a static
--- reference to a since-dropped column would fail the whole batch on a fresh DB.
 IF COL_LENGTH(N'dbo.Claim', N'EvidenceImagePath') IS NOT NULL
 BEGIN
     EXEC sys.sp_executesql N'
@@ -439,10 +373,6 @@ BEGIN
 END
 GO
 
--- ClaimMessage: the private conversation between the item's holder and one claimant, scoped to a Claim.
--- Exists so the holder can VERIFY a claimant by asking something only the owner would know, and so the two
--- can arrange the handover WITHOUT exchanging phone numbers. Readable only by that claimant, the item's
--- holder, and Admin — never public, never on the timeline. Cascade-deletes with its claim.
 IF OBJECT_ID(N'dbo.ClaimMessage', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.ClaimMessage (
@@ -458,7 +388,7 @@ BEGIN
 END
 GO
 
--- CameraCheckRequest: a request for staff to review camera footage. Status int enum.
+-- yeu cau xem camera
 IF OBJECT_ID(N'dbo.CameraCheckRequest', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.CameraCheckRequest (
@@ -468,7 +398,7 @@ BEGIN
         FromTime         datetime2      NOT NULL,
         ToTime           datetime2      NOT NULL,
         ItemDescription  nvarchar(1000) NOT NULL,
-        Status           int            NOT NULL CONSTRAINT DF_CameraCheckRequest_Status DEFAULT (0), -- 0 = Pending
+        Status           int            NOT NULL CONSTRAINT DF_CameraCheckRequest_Status DEFAULT (0),
         HandledByStaffId nvarchar(450)  NULL,
         ResponseNote     nvarchar(1000) NULL,
         CreatedAt        datetime2      NOT NULL CONSTRAINT DF_CameraCheckRequest_CreatedAt DEFAULT (SYSUTCDATETIME()),
@@ -484,7 +414,7 @@ BEGIN
 END
 GO
 
--- Notification: stored in-app notification (also pushed via SignalR by the service layer).
+-- thong bao + audit log
 IF OBJECT_ID(N'dbo.Notification', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.Notification (
@@ -502,12 +432,11 @@ BEGIN
 END
 GO
 
--- AuditLog: business event log; the source for the public timeline (IsPublic = 1 rows).
 IF OBJECT_ID(N'dbo.AuditLog', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.AuditLog (
         Id          int            NOT NULL IDENTITY(1,1) CONSTRAINT PK_AuditLog PRIMARY KEY,
-        ActorUserId nvarchar(450)  NULL,  -- nullable: system-initiated actions may have no actor
+        ActorUserId nvarchar(450)  NULL,
         Action      nvarchar(100)  NOT NULL,
         EntityType  nvarchar(100)  NOT NULL,
         EntityId    nvarchar(100)  NOT NULL,

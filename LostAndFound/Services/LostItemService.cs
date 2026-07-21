@@ -9,7 +9,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LostAndFound.Services;
 
-/// <summary>See <see cref="ILostItemService"/>. Mirrors FoundItemService for the lost-item board.</summary>
 public class LostItemService : ILostItemService
 {
     private const string ImageFolder = "lostandfound/lostitems";
@@ -28,11 +27,9 @@ public class LostItemService : ILostItemService
         _images = images;
     }
 
-    /// <inheritdoc />
     public async Task<int> CreateAsync(LostItemCreateViewModel vm, string ownerUserId)
     {
-        // Backstop: an admin may have flagged this user IsPostingBlocked. Controllers pre-check this,
-        // but enforce it here too so no create path (present or future) can slip past the block.
+
         var poster = await _db.Users.FindAsync(ownerUserId);
         if (poster is not null && poster.IsPostingBlocked)
             throw new InvalidOperationException("Bạn đã bị chặn đăng bài. Vui lòng liên hệ quản trị viên.");
@@ -73,7 +70,6 @@ public class LostItemService : ILostItemService
         return item.Id;
     }
 
-    /// <inheritdoc />
     public async Task<LostItemDetailViewModel?> GetDetailAsync(int id, ClaimsPrincipal user)
     {
         var item = await _db.LostItem.AsNoTracking()
@@ -90,7 +86,6 @@ public class LostItemService : ILostItemService
         var isStaffish = user.IsInRole("Staff") || user.IsInRole("Admin");
         var status = (LostItemStatus)item.Status;
 
-        // Non-Open posts are only visible to the owner/staff.
         if (status != LostItemStatus.Open && !(isOwner || isStaffish)) return null;
 
         var ownerName = await _db.Users.AsNoTracking()
@@ -127,7 +122,6 @@ public class LostItemService : ILostItemService
         };
     }
 
-    /// <inheritdoc />
     public async Task<LostItemEditViewModel?> GetForEditAsync(int id, string userId)
     {
         var item = await _db.LostItem.AsNoTracking()
@@ -153,7 +147,6 @@ public class LostItemService : ILostItemService
         };
     }
 
-    /// <inheritdoc />
     public async Task<bool> UpdateAsync(int id, LostItemEditViewModel vm, string userId)
     {
         var item = await _db.LostItem
@@ -187,7 +180,7 @@ public class LostItemService : ILostItemService
         var toRemove = item.LostItemImage.Where(im => removeIds.Contains(im.Id)).ToList();
         if (toRemove.Count > 0) _db.LostItemImage.RemoveRange(toRemove);
         var kept = item.LostItemImage.Where(im => !removeIds.Contains(im.Id)).OrderBy(im => im.SortOrder).ToList();
-        // Float the explicitly-chosen cover (if it survived removal) to SortOrder 0.
+
         if (vm.CoverImageId is int coverId)
         {
             var cover = kept.FirstOrDefault(im => im.Id == coverId);
@@ -213,7 +206,6 @@ public class LostItemService : ILostItemService
         return true;
     }
 
-    /// <inheritdoc />
     public async Task<bool> DeleteAsync(int id, string userId)
     {
         var item = await _db.LostItem.FirstOrDefaultAsync(l => l.Id == id);
@@ -221,14 +213,13 @@ public class LostItemService : ILostItemService
         if ((LostItemStatus)item.Status != LostItemStatus.Open) return false;
 
         await using var tx = await _db.Database.BeginTransactionAsync();
-        _db.LostItem.Remove(item); // images + tag links cascade
+        _db.LostItem.Remove(item);
         await _db.SaveChangesAsync();
         await _audit.LogAsync(userId, "Deleted", "LostItem", id.ToString(), null, null, "Xoá bài đăng", isPublic: false);
         await tx.CommitAsync();
         return true;
     }
 
-    /// <inheritdoc />
     public async Task<bool> MarkResolvedAsync(int id, string userId)
     {
         var item = await _db.LostItem.FirstOrDefaultAsync(l => l.Id == id);

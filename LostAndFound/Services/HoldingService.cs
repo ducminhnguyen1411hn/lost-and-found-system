@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LostAndFound.Services;
 
-/// <inheritdoc />
 public class HoldingService : IHoldingService
 {
     private readonly ApplicationDbContext _db;
@@ -22,7 +21,7 @@ public class HoldingService : IHoldingService
 
     public async Task<List<PendingIntakeViewModel>> GetPendingIntakeAsync()
     {
-        var pending = (int)FoundItemStatus.PendingDropoff; // only Custodial items ever land here
+        var pending = (int)FoundItemStatus.PendingDropoff;
 
         return await _db.FoundItem
             .Where(f => f.Status == pending)
@@ -45,19 +44,16 @@ public class HoldingService : IHoldingService
         var item = await _db.FoundItem.FirstOrDefaultAsync(f => f.Id == itemId);
         if (item is null) return false;
 
-        // Legal transition guard: only a Custodial item still awaiting intake can be received.
         if (item.Status != (int)FoundItemStatus.PendingDropoff || item.HoldingType != (int)HoldingType.Custodial)
             return false;
 
         await using var tx = await _db.Database.BeginTransactionAsync();
 
-        item.CustodianStaffId = staffUserId;   // Custodial holder is the receiving staff (never role-hardcoded)
+        item.CustodianStaffId = staffUserId;
         item.StorageLocation = storageLocation.Trim();
         item.Status = (int)FoundItemStatus.Open;
         await _db.SaveChangesAsync();
 
-        // Public milestone ("received & opened"), but the storage location is internal — keep it OUT of the
-        // public detail so it never lands on the item's public timeline.
         await _auditService.LogAsync(staffUserId, "Received", "FoundItem", itemId.ToString(),
             FoundItemStatus.PendingDropoff.ToString(), FoundItemStatus.Open.ToString(),
             "Nhân viên đã tiếp nhận đồ ký gửi và mở để người mất nhận lại.", isPublic: true);
@@ -110,7 +106,7 @@ public class HoldingService : IHoldingService
     public async Task<bool> UpdateStorageLocationAsync(int itemId, string storageLocation, string staffUserId)
     {
         var item = await _db.FoundItem.FirstOrDefaultAsync(f => f.Id == itemId);
-        if (item is null || item.CustodianStaffId is null) return false; // only items actually in custody
+        if (item is null || item.CustodianStaffId is null) return false;
 
         await using var tx = await _db.Database.BeginTransactionAsync();
 
@@ -118,7 +114,6 @@ public class HoldingService : IHoldingService
         item.StorageLocation = storageLocation.Trim();
         await _db.SaveChangesAsync();
 
-        // Internal (isPublic: false): the storage location never belongs on the item's public timeline.
         await _auditService.LogAsync(staffUserId, "StorageUpdated", "FoundItem", itemId.ToString(),
             null, null, $"Cập nhật nơi cất: {old} → {item.StorageLocation}", isPublic: false);
 

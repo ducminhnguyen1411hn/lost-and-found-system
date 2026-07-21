@@ -5,7 +5,7 @@
     ViewData["BoardHeading"] = "Bài đăng của tôi";
     ViewData["BoardEmpty"] = "Bạn chưa có bài đăng nào khớp bộ lọc.";
     ViewData["ShowKindPill"] = !Model.Kind.HasValue;
-    ViewData["ShowStatus"] = true; // unlike the public board, your own posts can be in any status
+    ViewData["ShowStatus"] = true;
 }
 
 @if (TempData["SuccessMessage"] != null)
@@ -14,8 +14,7 @@
 }
 
 <p class="text-muted small">
-    Mọi bài bạn đã đăng, ở <strong>mọi trạng thái</strong> — kể cả những bài không còn hiển thị trên bảng công khai
-    (đã duyệt yêu cầu nhận, đã trả, chờ bàn giao cho Staff).
+    Đây là nơi lưu trữ toàn bộ bài đăng của bạn.
 </p>
 
 <partial name="_BoardShell" model="Model" />

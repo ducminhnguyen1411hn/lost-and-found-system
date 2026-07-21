@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using LostAndFound.Models;
 using LostAndFound.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -25,11 +25,13 @@ namespace LostAndFound.Areas.Identity.Pages.Account
 
         public class InputModel
         {
-            [Required][EmailAddress]
+            [Required]
+            [EmailAddress]
             [Display(Name = "Email")]
             public string Email { get; set; }
 
-            [Required][StringLength(100, MinimumLength = 6)]
+            [Required]
+            [StringLength(100, MinimumLength = 6)]
             [DataType(DataType.Password)]
             [Display(Name = "Mật khẩu")]
             public string Password { get; set; }
@@ -39,11 +41,13 @@ namespace LostAndFound.Areas.Identity.Pages.Account
             [Compare("Password", ErrorMessage = "Mật khẩu và xác nhận mật khẩu không khớp.")]
             public string ConfirmPassword { get; set; }
 
-            [Required][StringLength(200)]
+            [Required]
+            [StringLength(200)]
             [Display(Name = "Họ và tên")]
             public string FullName { get; set; }
 
-            [Required][StringLength(20)]
+            [Required]
+            [StringLength(20)]
             [Display(Name = "Số điện thoại")]
             [Phone]
             public string PhoneNumber { get; set; }
@@ -67,7 +71,7 @@ namespace LostAndFound.Areas.Identity.Pages.Account
                 var result = await _userManager.CreateAsync(user, Input.Password);
                 if (result.Succeeded)
                 {
-                    await _userManager.AddToRoleAsync(user, "Member"); // FR-AUTH-01
+                    await _userManager.AddToRoleAsync(user, "Member");
                     await _signInManager.SignInAsync(user, isPersistent: false);
                     return LocalRedirect(returnUrl);
                 }

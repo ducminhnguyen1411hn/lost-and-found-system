@@ -27,7 +27,7 @@
                                 {
                                     @foreach (var parent in ViewBag.ParentCategories as List<LostAndFound.Models.ViewModels.Admin.CategoryViewModel>)
                                     {
-                                        if (parent.ParentId == null) // Only show root categories as parents
+                                        if (parent.ParentId == null)
                                         {
                                             <option value="@parent.Id">@parent.Name</option>
                                         }

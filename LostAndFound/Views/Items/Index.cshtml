@@ -3,8 +3,8 @@
     ViewData["Title"] = "Bảng đồ";
     ViewData["BoardAction"] = "Index";
     ViewData["BoardHeading"] = "Bảng đồ";
-    ViewData["ShowKindPill"] = !Model.Kind.HasValue; // the pill only informs when both sides are mixed
-    ViewData["ShowStatus"] = false;                  // the public board is Open-only, so a status badge is noise
+    ViewData["ShowKindPill"] = !Model.Kind.HasValue;
+    ViewData["ShowStatus"] = false;
 }
 
 @if (TempData["SuccessMessage"] != null)

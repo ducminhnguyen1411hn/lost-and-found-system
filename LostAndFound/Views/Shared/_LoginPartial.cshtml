@@ -3,11 +3,6 @@
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
 
-@*
-    Required by the default ASP.NET Core Identity UI layout. This is standard template
-    boilerplate (same as `dotnet new mvc --auth Individual`). The FR-AUTH feature can
-    restyle it later; the base just needs login/register/logout to be reachable.
-*@
 <ul class="navbar-nav">
 @if (SignInManager.IsSignedIn(User))
 {

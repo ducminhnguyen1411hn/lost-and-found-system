@@ -12,8 +12,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LostAndFound.Controllers;
 
-/// <summary>Thin controller for FR-FOUND. All rules live in <see cref="IFoundItemService"/>;
-/// this only orchestrates: bind → validate → call service → view/redirect.</summary>
 public class FoundItemsController : Controller
 {
     private readonly IFoundItemService _service;
@@ -25,12 +23,10 @@ public class FoundItemsController : Controller
         _db = db;
     }
 
-    // GET /FoundItems — replaced by the unified board; keep a permanent redirect for old links/bookmarks.
     [AllowAnonymous]
     [HttpGet]
     public IActionResult Index() => RedirectToActionPermanent("Index", "Items", new { kind = ItemKind.Found });
 
-    // GET /FoundItems/Details/5 — public detail (service gates hidden fields)
     [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> Details(int id)
@@ -40,12 +36,11 @@ public class FoundItemsController : Controller
         return View(vm);
     }
 
-    // GET /FoundItems/Create — report form
     [Authorize(Roles = "Member,Staff")]
     [HttpGet]
     public async Task<IActionResult> Create()
     {
-        // Check if user is posting blocked
+
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var user = await _db.Users.FindAsync(userId);
         if (user != null && user.IsPostingBlocked)
@@ -63,13 +58,12 @@ public class FoundItemsController : Controller
         return View(vm);
     }
 
-    // POST /FoundItems/Create
     [Authorize(Roles = "Member,Staff")]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(FoundItemCreateViewModel vm)
     {
-        // Check if user is posting blocked
+
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var user = await _db.Users.FindAsync(userId);
         if (user != null && user.IsPostingBlocked)
@@ -101,7 +95,6 @@ public class FoundItemsController : Controller
         return View(vm);
     }
 
-    // GET /FoundItems/Edit/5 — owner-only (service enforces)
     [Authorize]
     [HttpGet]
     public async Task<IActionResult> Edit(int id)
@@ -114,7 +107,6 @@ public class FoundItemsController : Controller
         return View(vm);
     }
 
-    // POST /FoundItems/Edit/5
     [Authorize]
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -139,7 +131,6 @@ public class FoundItemsController : Controller
         }
     }
 
-    // POST /FoundItems/Delete/5 — owner-only (service enforces)
     [Authorize]
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -169,20 +160,19 @@ public class FoundItemsController : Controller
         var cats = await _db.Category.AsNoTracking().ToListAsync();
         var parents = cats.Where(c => c.ParentId == null).OrderBy(c => c.Name).ToList();
         var byId = cats.ToDictionary(c => c.Id);
-        
+
         var result = new List<SelectListItem>();
-        
+
         foreach (var parent in parents)
         {
-            // Add parent category
+
             result.Add(new SelectListItem
             {
                 Value = parent.Id.ToString(),
                 Text = parent.Name,
                 Selected = selected == parent.Id
             });
-            
-            // Add children categories with indentation
+
             var children = cats.Where(c => c.ParentId == parent.Id).OrderBy(c => c.Name).ToList();
             foreach (var child in children)
             {
@@ -194,7 +184,7 @@ public class FoundItemsController : Controller
                 });
             }
         }
-        
+
         return result;
     }
 

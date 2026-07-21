@@ -6,7 +6,6 @@ public class ClaimCreateViewModel
 {
     public int FoundItemId { get; set; }
 
-    // Read-only context (populated by the service for the GET form; not posted back for trust).
     public string ItemTitle { get; set; } = string.Empty;
     public string? ItemCoverImage { get; set; }
 

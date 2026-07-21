@@ -15,7 +15,7 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h4 mb-0">Yêu cầu camera của tôi</h1>
-    <a asp-action="Create" class="btn btn-primary btn-sm">+ Xin trích camera</a>
+    <a asp-action="Create" class="btn btn-primary btn-sm">+ Xin show camera</a>
 </div>
 
 @if (TempData["SuccessMessage"] != null)
@@ -25,7 +25,7 @@
 
 @if (!Model.Any())
 {
-    <p class="text-muted">Bạn chưa gửi yêu cầu trích camera nào.</p>
+    <p class="text-muted">Bạn chưa gửi yêu cầu show camera nào.</p>
 }
 else
 {

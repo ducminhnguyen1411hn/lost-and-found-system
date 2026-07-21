@@ -43,14 +43,13 @@
 
             @if (Model.ExternalLogins.Count > 0)
             {
-                <!-- Divider -->
+
                 <div class="d-flex align-items-center my-4">
                     <div style="flex: 1; height: 1px; background-color: #e5e7eb;"></div>
                     <span class="mx-3 text-muted small">Hoặc tiếp tục với</span>
                     <div style="flex: 1; height: 1px; background-color: #e5e7eb;"></div>
                 </div>
 
-                <!-- External Login Buttons -->
                 <div>
                     @foreach (var provider in Model.ExternalLogins)
                     {

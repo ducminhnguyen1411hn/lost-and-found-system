@@ -102,6 +102,9 @@ appsettings.*.local.json
 # User-specific secrets (use `dotnet user-secrets` for real secrets; do NOT commit them)
 secrets.json
 
+# Locally-uploaded images (Cloudinary fallback when the network blocks it) — user data, not source
+LostAndFound/wwwroot/uploads/
+
 # OS
 .DS_Store
 Thumbs.db

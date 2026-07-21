@@ -56,7 +56,7 @@
                         }
                         @if (!Model.ViewerIsHolder)
                         {
-                            <div class="form-text">Chỉ người đang giữ món đồ nhìn thấy phần này.</div>
+                            <div class="form-text">Chỉ người đang giữ món đồ mới có thể đọc được thông tin bạn cung cấp.</div>
                         }
                     </div>
                 }
@@ -92,12 +92,11 @@
                             <button type="submit" class="btn btn-outline-danger btn-sm">Từ chối</button>
                         </form>
                     }
-                    <div class="form-text mb-0">Chưa chắc? Hỏi thêm ở khung trao đổi bên cạnh trước khi quyết định.</div>
+                    <div class="form-text mb-0">Nếu chưa chắc chắn, hãy trao đổi thêm ở khung chat đối diện để xác nhận thêm các thông tin cần thiết.</div>
                 </div>
             </div>
         }
 
-        @* Same partial as the item page — one source of truth for the handover UI. *@
         @if (Model.Handover is not null)
         {
             <partial name="_HandoverPanel" model="Model.Handover" />
@@ -108,7 +107,7 @@
         <div class="card">
             <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <span>Trao đổi</span>
-                <span class="small text-muted">Chỉ bạn và bên kia đọc được</span>
+                <span class="small text-muted">Chỉ bạn và người đối diện có thể thấy được đoạn hội thoại này</span>
             </div>
             <div id="chatBox" class="card-body d-flex flex-column gap-2" style="max-height:420px; overflow-y:auto;">
                 @if (Model.Messages.Count == 0)
@@ -142,19 +141,17 @@
                                placeholder="Nhắn cho bên kia…" required />
                         <button type="submit" class="btn btn-primary">Gửi</button>
                     </form>
-                    <div class="form-text">Đừng đăng số điện thoại nếu bạn chưa muốn — cứ trao đổi ở đây.</div>
+                    <div class="form-text">Hạn chế đưa thông tin cá nhân cho người lạ nếu bạn không xác định được rõ ràng.</div>
                 </div>
             }
             else
             {
-                <div class="card-footer bg-light small text-muted">Yêu cầu đã đóng — không gửi tin nhắn được nữa.</div>
+                <div class="card-footer bg-light small text-muted">Yêu cầu đã đóng. Khung chat sẽ được đóng lại.</div>
             }
         </div>
     </div>
 </div>
 
-@* Live chat without SignalR: poll the Messages endpoint every few seconds and append new bubbles.
-   Send goes through AJAX so neither side reloads. All auth is enforced server-side by the endpoint. *@
 <script>
     (function () {
         var box = document.getElementById('chatBox');
@@ -183,7 +180,7 @@
             meta.textContent = m.sender + ' · ' + m.at;
             var body = document.createElement('div');
             body.style.whiteSpace = 'pre-wrap';
-            body.textContent = m.body;                 // textContent (not innerHTML) => XSS-safe
+            body.textContent = m.body;
             bubble.appendChild(meta);
             bubble.appendChild(body);
             row.appendChild(bubble);
@@ -193,7 +190,7 @@
 
         var busy = false;
         function poll() {
-            if (busy || document.hidden) return;       // don't stack requests / poll a hidden tab
+            if (busy || document.hidden) return;
             busy = true;
             fetch(url + '?id=' + claimId + '&afterId=' + lastId, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(function (r) { return r.ok ? r.json() : null; })

@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace LostAndFound.Models.ViewModels.Camera;
 
-/// <summary>Member's "xin trích camera" form (FR-CAM-01): where + when + what to look for.</summary>
 public class CameraRequestCreateViewModel
 {
     [Required(ErrorMessage = "Vui lòng chọn khu vực.")]

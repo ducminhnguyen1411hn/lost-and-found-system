@@ -117,7 +117,7 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        // Toggle "remove" for each existing image via the × button (no checkbox needed on screen).
+
         document.querySelectorAll('#existingImages [data-img]').forEach(function (box) {
             var flag = box.querySelector('[data-remove-flag]');
             var btn = box.querySelector('[data-remove-btn]');
@@ -128,10 +128,9 @@
                 thumb.style.opacity = flag.checked ? '0.35' : '1';
                 btn.classList.toggle('btn-danger', !flag.checked);
                 btn.classList.toggle('btn-secondary', flag.checked);
-                btn.innerHTML = flag.checked ? '&#8635;' : '&times;'; // ↻ undo / ×
+                btn.innerHTML = flag.checked ? '&#8635;' : '&times;';
                 btn.title = flag.checked ? 'Hoàn tác' : 'Xoá ảnh này';
-                // A marked-for-removal image can't be the cover: disable its radio and,
-                // if it was the selected cover, hand it to the first remaining image.
+
                 if (cover) {
                     cover.disabled = flag.checked;
                     if (flag.checked && cover.checked) {
