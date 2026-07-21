@@ -65,6 +65,53 @@
     </div>
 }
 
+@* Once returned: show WHO received it. Seen by holder/admin and by the accepted claimant themself
+   (own name — no leak). The public timeline still never names users. *@
+@if (Model.Status == FoundItemStatus.Returned && Model.AcceptedClaim is not null
+     && (Model.IsHolderView || Model.ViewerIsAcceptedClaimant))
+{
+    <div class="card border-success mt-3">
+        <div class="card-body py-2 d-flex justify-content-between align-items-center">
+            @if (Model.IsHolderView)
+            {
+                <span>✅ <strong>Đã trả cho:</strong> @Model.AcceptedClaim.ClaimantName</span>
+            }
+            else
+            {
+                <span>✅ <strong>Bạn đã nhận món đồ này.</strong></span>
+            }
+            <a asp-controller="Claims" asp-action="Details" asp-route-id="@Model.AcceptedClaim.ClaimId"
+               class="btn btn-outline-secondary btn-sm">Xem chi tiết</a>
+        </div>
+    </div>
+}
+
+@* Holder: rejected claims — kept for traceability (holder/admin only), read-only. *@
+@if (Model.IsHolderView && Model.RejectedClaims.Count > 0)
+{
+    <details class="mt-3">
+        <summary class="text-muted small" style="cursor:pointer;">Yêu cầu đã từ chối (@Model.RejectedClaims.Count)</summary>
+        <div class="card mt-2">
+            <div class="card-body py-2">
+                @foreach (var c in Model.RejectedClaims)
+                {
+                    <div class="border-bottom pb-2 mb-2 small">
+                        <div class="d-flex justify-content-between">
+                            <span><strong>@c.ClaimantName</strong> <span class="badge bg-secondary">Đã từ chối</span></span>
+                            <span class="text-muted">@AppTime.ToLocal(c.CreatedAt).ToString("dd/MM/yyyy HH:mm")</span>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(c.RejectReason))
+                        {
+                            <div class="text-muted">Lý do: @c.RejectReason</div>
+                        }
+                        <a asp-controller="Claims" asp-action="Details" asp-route-id="@c.ClaimId" class="text-decoration-none">Xem chi tiết</a>
+                    </div>
+                }
+            </div>
+        </div>
+    </details>
+}
+
 @* Handover panel — shared with the claim page so the two can't drift. Null = must not render. *@
 @if (Model.Handover is not null)
 {

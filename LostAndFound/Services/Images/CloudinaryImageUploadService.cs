@@ -30,7 +30,11 @@ public class CloudinaryImageUploadService : IImageUploadService
             Folder = folder
         };
 
-        var result = await _cloudinary.UploadAsync(uploadParams);
+        // Fail fast (not the SDK's default 100s) so FallbackImageUploadService can switch to local storage
+        // quickly when Cloudinary is unreachable. A blocked host usually errors instantly; this cap only
+        // bites when the TLS handshake hangs.
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var result = await _cloudinary.UploadAsync(uploadParams, cts.Token);
         if (result.Error is not null)
             throw new ImageUploadException("Tải ảnh lên thất bại: " + result.Error.Message);
 

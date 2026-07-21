@@ -7,7 +7,8 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h3 class="fw-bold mb-1 text-dark">Đồ chưa có người nhận</h3>
-            <p class="text-muted mb-0">Đồ để lâu không ai nhận. Bấm "Quét" để đánh dấu các món Open đã quá hạn, rồi thanh lý.</p>
+            <p class="text-muted mb-1">Dưới đây là những món đồ chưa có người nhận quá 30 ngày.</p>
+            <p class="text-muted mb-0">Quét để lấy được dữ liệu đồ chưa có người nhận lâu ngày.</p>
         </div>
         <form asp-action="SweepUnclaimed" method="post" class="d-inline"
               onsubmit="return confirm('Đánh dấu tất cả đồ đang mở đã quá @ViewBag.OverdueDays ngày (và không có ai đang xin nhận) là chưa có người nhận?');">

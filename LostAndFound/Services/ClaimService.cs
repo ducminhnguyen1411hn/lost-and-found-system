@@ -387,21 +387,28 @@ public class ClaimService : IClaimService
                 (c.Status == (int)ClaimStatus.Pending || c.Status == (int)ClaimStatus.Accepted));
         }
 
-        // Private claim data only for holder/admin (blind listing by construction).
+        // Who (if anyone) holds the accepted claim — needed for the handover buttons AND so the accepted
+        // claimant can see the "you received it" record on the returned item.
+        var acceptedClaimantId = await _db.Claim.AsNoTracking()
+            .Where(c => c.FoundItemId == foundItemId && c.Status == (int)ClaimStatus.Accepted)
+            .Select(c => c.ClaimantUserId).FirstOrDefaultAsync();
+        var isAcceptedClaimant = uid != null && uid == acceptedClaimantId;
+
+        // Private claim data only for holder/admin (blind listing). The accepted claimant additionally gets
+        // THEIR OWN accepted claim so the returned item can confirm "you received it" (own name — no leak).
         IReadOnlyList<ClaimForHolderViewModel> pending = Array.Empty<ClaimForHolderViewModel>();
+        IReadOnlyList<ClaimForHolderViewModel> rejected = Array.Empty<ClaimForHolderViewModel>();
         ClaimForHolderViewModel? accepted = null;
         if (isHolder)
         {
             pending = await BuildHolderClaimsAsync(foundItemId, ClaimStatus.Pending);
             accepted = (await BuildHolderClaimsAsync(foundItemId, ClaimStatus.Accepted)).FirstOrDefault();
+            rejected = await BuildHolderClaimsAsync(foundItemId, ClaimStatus.Rejected);
         }
-
-        // Accepted claimant (for handover buttons).
-        var acceptedClaimantId = await _db.Claim.AsNoTracking()
-            .Where(c => c.FoundItemId == foundItemId && c.Status == (int)ClaimStatus.Accepted)
-            .Select(c => c.ClaimantUserId).FirstOrDefaultAsync();
-
-        var isAcceptedClaimant = uid != null && uid == acceptedClaimantId;
+        else if (isAcceptedClaimant)
+        {
+            accepted = (await BuildHolderClaimsAsync(foundItemId, ClaimStatus.Accepted)).FirstOrDefault();
+        }
 
         // Built ONLY for the two parties, so the names inside never reach anyone else.
         var handover = await BuildHandoverAsync(item, acceptedClaimantId, isHolder, isAcceptedClaimant);
@@ -414,6 +421,8 @@ public class ClaimService : IClaimService
             IsHolderView = isHolder,
             PendingClaims = pending,
             AcceptedClaim = accepted,
+            RejectedClaims = rejected,
+            ViewerIsAcceptedClaimant = isAcceptedClaimant,
             Handover = handover
         };
     }
@@ -452,7 +461,7 @@ public class ClaimService : IClaimService
             .OrderBy(c => c.CreatedAt)
             .Select(c => new
             {
-                c.Id, c.ClaimantUserId, c.CreatedAt, c.VerificationDetails, c.ContactPhone, c.ContactEmail,
+                c.Id, c.ClaimantUserId, c.CreatedAt, c.VerificationDetails, c.ContactPhone, c.ContactEmail, c.RejectReason,
                 Images = c.ClaimImage.OrderBy(i => i.SortOrder).Select(i => i.Url).ToList()
             })
             .ToListAsync();
@@ -469,7 +478,8 @@ public class ClaimService : IClaimService
                 EvidenceImagePaths = r.Images,
                 Status = status,
                 ContactPhone = r.ContactPhone,
-                ContactEmail = r.ContactEmail
+                ContactEmail = r.ContactEmail,
+                RejectReason = r.RejectReason
             });
         }
         return result;

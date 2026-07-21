@@ -117,11 +117,13 @@ public class FoundItemService : IFoundItemService
         // verified against, so handing it to them would gut the whole two-sided check.
         var canSeePrivate = isReporter || isCustodian || isStaffish;
 
-        // A party to the item: needed during ClaimAccepted (the handover panel) and after Returned —
-        // ConfirmReceived redirects straight here, so without this the claimant 404s the instant they
-        // confirm receipt of their own item.
-        var isAcceptedClaimant = uid != null && await _db.Claim.AsNoTracking()
-            .AnyAsync(c => c.FoundItemId == id && c.ClaimantUserId == uid && c.Status == (int)ClaimStatus.Accepted);
+        // A party to the item: ANYONE who has ever claimed it (any status) may open the detail page.
+        // Covers the accepted claimant (handover panel + the ConfirmReceived redirect lands here) AND
+        // rejected claimants — otherwise they 404 on "← Về món đồ" while the item sits in ClaimAccepted.
+        // PrivateMarks stays gated by canSeePrivate below, so opening the page never exposes the secret
+        // they were verified against; they only see the item's public status ("someone else is getting it").
+        var isClaimant = uid != null && await _db.Claim.AsNoTracking()
+            .AnyAsync(c => c.FoundItemId == id && c.ClaimantUserId == uid);
 
         var status = (FoundItemStatus)item.Status;
         // Publicly viewable: Open (it's browsable) and Returned — FR-TL-03 finalises the timeline there and
@@ -130,7 +132,7 @@ public class FoundItemService : IFoundItemService
         // Everything else (PendingDropoff / ClaimAccepted / Unclaimed / Disposed) stays with the parties + staff.
         // PrivateMarks is gated separately by canSeePrivate, so opening the page never exposes the secret.
         var isPubliclyViewable = status == FoundItemStatus.Open || status == FoundItemStatus.Returned;
-        if (!isPubliclyViewable && !canSeePrivate && !isAcceptedClaimant) return null;
+        if (!isPubliclyViewable && !canSeePrivate && !isClaimant) return null;
 
         // Owner may edit/delete only while the item is still editable (no claim yet).
         var hasClaim = await _db.Claim.AsNoTracking().AnyAsync(c => c.FoundItemId == id);

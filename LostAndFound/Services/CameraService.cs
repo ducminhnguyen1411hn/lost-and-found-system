@@ -42,8 +42,8 @@ public class CameraService : ICameraService
         await _db.SaveChangesAsync();
 
         await _notificationService.PushToStaffAsync("CameraRequest",
-            "Yêu cầu trích camera mới",
-            "Có người xin trích camera — vào mục Yêu cầu camera để xử lý.",
+            "Yêu cầu show camera mới",
+            "Có người xin show camera — vào mục Yêu cầu camera để xử lý.",
             "/Camera");
         await tx.CommitAsync();
         return req.Id;
@@ -85,7 +85,7 @@ public class CameraService : ICameraService
             .Select(r => new Row
             {
                 Id = r.Id,
-                LocationName = r.Location.Name,
+                LocationName = r.Location.Name, 
                 FromTime = r.FromTime,
                 ToTime = r.ToTime,
                 ItemDescription = r.ItemDescription,
@@ -125,11 +125,11 @@ public class CameraService : ICameraService
         await _db.SaveChangesAsync();
 
         await _auditService.LogAsync(staffUserId, "CameraResponded", "CameraCheckRequest", id.ToString(),
-            from.ToString(), outcome.ToString(), $"Phản hồi yêu cầu trích camera: {StatusText((int)outcome)}", isPublic: false);
+            from.ToString(), outcome.ToString(), $"Phản hồi yêu cầu show camera: {StatusText((int)outcome)}", isPublic: false);
 
         await _notificationService.PushAsync(req.RequesterUserId, "CameraResponded",
             outcome == CameraRequestStatus.Resolved ? "Yêu cầu camera đã được xử lý" : "Yêu cầu camera bị từ chối",
-            string.IsNullOrWhiteSpace(note) ? "Nhân viên đã phản hồi yêu cầu trích camera của bạn." : $"Phản hồi: {note.Trim()}",
+            string.IsNullOrWhiteSpace(note) ? "Nhân viên đã phản hồi yêu cầu show camera của bạn." : $"Phản hồi: {note.Trim()}",
             "/Camera/Mine");
 
         await tx.CommitAsync();

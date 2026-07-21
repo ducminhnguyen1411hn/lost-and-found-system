@@ -67,7 +67,11 @@ namespace LostAndFound
             // ---- Domain services (first vertical slice wires the shared contracts) ----
             builder.Services.AddScoped<ITagService, TagService>();
             builder.Services.AddScoped<IAuditService, AuditService>();
-            builder.Services.AddScoped<IImageUploadService, CloudinaryImageUploadService>();
+            // Image upload: Cloudinary is primary; if it's unreachable (blocked network / offline) the
+            // FallbackImageUploadService saves the image to wwwroot/uploads instead, so uploads never hard-fail.
+            builder.Services.AddScoped<CloudinaryImageUploadService>();
+            builder.Services.AddScoped<LocalImageUploadService>();
+            builder.Services.AddScoped<IImageUploadService, FallbackImageUploadService>();
             builder.Services.AddScoped<IFoundItemService, FoundItemService>();
             builder.Services.AddScoped<IAdminService, AdminService>();
             builder.Services.AddScoped<ILostItemService, LostItemService>();

@@ -4,7 +4,7 @@
     <div class="card-header bg-light">Bàn giao 2 chiều</div>
     <div class="card-body">
         <p class="text-center text-muted small mb-3">
-            Cả hai bên phải xác nhận thì món đồ mới chuyển sang <strong>Đã trả</strong>.
+            Sự bàn giao chỉ có thể hoàn thành nếu cả hai xác nhận việc bàn giao.
         </p>
 
         <div class="row g-3 justify-content-center">
@@ -72,7 +72,7 @@
 
         @* State the rule out loud — it's the whole point of FR-CLAIM-05 and it isn't obvious from two checkboxes. *@
         <div class="alert alert-info small text-center mt-3 mb-0">
-            Khi <strong>cả hai</strong> cùng xác nhận → món đồ chuyển sang <strong>Đã trả</strong> và lịch sử được chốt lại.
+            Khi <strong>cả hai</strong> cùng xác nhận → món đồ chuyển sang <strong>Đã trả</strong> và khung chat sẽ được đóng lại nhằm bảo mật thông tin cá nhân.
         </div>
 
         @if (Model.CanCancelAcceptance)

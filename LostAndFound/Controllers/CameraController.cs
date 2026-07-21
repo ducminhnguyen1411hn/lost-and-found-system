@@ -44,7 +44,7 @@ public class CameraController : Controller
         }
 
         await _camera.CreateAsync(vm, Uid);
-        TempData["SuccessMessage"] = "Đã gửi yêu cầu trích camera. Nhân viên sẽ phản hồi sớm.";
+        TempData["SuccessMessage"] = "Đã gửi yêu cầu xem xét camera. Yêu cầu của bạn sẽ được xử lý trên hàng chờ.";
         return RedirectToAction(nameof(Mine));
     }
 

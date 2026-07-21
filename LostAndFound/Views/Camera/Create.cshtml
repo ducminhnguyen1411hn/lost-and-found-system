@@ -1,10 +1,10 @@
 @model LostAndFound.Models.ViewModels.Camera.CameraRequestCreateViewModel
 @{
-    ViewData["Title"] = "Xin trích camera";
+    ViewData["Title"] = "Xin show camera";
     var nowMax = AppTime.LocalNow.ToString("yyyy-MM-ddTHH:mm");
 }
 
-<h1 class="h4 mb-1">Xin trích camera</h1>
+<h1 class="h4 mb-1">Xin show camera</h1>
 <p class="text-muted">Nhờ nhân viên xem lại camera một khu vực trong khoảng thời gian để tìm món đồ của bạn.</p>
 
 <form asp-action="Create" method="post" class="row g-3" style="max-width: 640px;">
